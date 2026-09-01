@@ -14,7 +14,7 @@
   --color-link:             #C2410C;   /* accessible text-link color on light surfaces */
   --color-focus:            #C2410C;   /* focus indicator on light surfaces */
   --color-control-border:   #6B7280;   /* form/control boundary; >=3:1 on light surfaces */
-  --color-on-brand:         #0D1117;   /* text/icons on orange brand fills */
+  --color-on-brand:         #FFFFFF;   /* text/icons on orange brand fills */
   --color-brand-gradient:   linear-gradient(135deg, #F97316, #F59E0B);
 
   /* Shell (dark zones: topbar, left nav) */
@@ -1848,8 +1848,9 @@ textarea:focus {
   font-family: var(--font-ui);
   color: var(--color-ink);
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  box-sizing: border-box;
   outline: none;
   width: auto;
 }
@@ -2673,7 +2674,8 @@ textarea:focus {
    ============================================================ */
 .toast-container {
   position: fixed;
-  top: 68px;
+  top: auto;
+  bottom: 24px;
   right: 24px;
   z-index: var(--z-toast);
   display: flex;
@@ -3203,9 +3205,9 @@ textarea:focus {
    ============================================================ */
 .toast-container {
   position: fixed;
-  top: 24px;
+  top: auto;
   right: 24px;
-  bottom: auto;
+  bottom: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
