@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #1A1D23;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tax Engine — Tax Compliance | VeriDex</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/components.js"></script>
+  <script src="js/config-engine.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/reports-utils.js"></script>
+  <style>
+    .tax-progress-row { display:flex; align-items:center; gap:10px; }
+    .tax-progress-track { flex:1; height:6px; background:var(--gray-200); border-radius:3px; overflow:hidden; min-width:120px; }
+    .tax-progress-fill { height:100%; border-radius:3px; background:var(--v-teal); }
+    .tax-progress-fill.over { background:var(--coral); }
+    .tax-progress-label { font-size:11px; color:var(--gray-500); white-space:nowrap; min-width:96px; text-align:right; }
+    .tax-lookup-row { display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; max-width:420px; }
+    .tax-lookup-result { margin-top:14px; padding:12px 14px; border-radius:var(--radius); background:var(--v-teal-bg); border:1px solid rgba(15,110,99,0.25); font-size:12.5px; color:var(--gray-700); display:none; }
+    .tax-lookup-result.show { display:block; }
+    .tax-copy { font-size:12px; color:var(--gray-500); line-height:1.6; margin-bottom:14px; max-width:900px; }
+  </style>
+</head>
+<body>
+<main class="main-content" id="main-content">
+
+  <!-- ═══ PAGE HEADER ═══ -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Tax Engine</div>
+      <div class="page-subtitle">Sales &amp; use tax, payroll tax, 1099 filing, and consolidated liability tracking</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-outline btn-sm" onclick="exportActiveTaxTable()">Export Workbook</button>
+      <button class="btn btn-primary btn-sm" onclick="addJurisdiction()">+ Register Jurisdiction</button>
+    </div>
+  </div>
+
+  <!-- ═══ STAT CARDS ═══ -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon si-navy"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#102a2e" stroke-width="1.8"/><path d="M7 10h6M7 13h4M9 5.5v2" stroke="#102a2e" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="stat-info">
+        <div class="stat-value" id="tax-liability-stat">$0</div>
+        <div class="stat-label">Total Tax Liability (This Period)</div>
+        <div class="stat-change text-muted">Sales/use, payroll &amp; 1099 combined</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-coral"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="1.6" stroke="#c9791f" stroke-width="1.6"/><path d="M3 8h14M6.5 2.5v3M13.5 2.5v3" stroke="#c9791f" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <div class="stat-info">
+        <div class="stat-value" id="tax-filings-stat">0</div>
+        <div class="stat-label">Filings Due This Month</div>
+        <div class="stat-change" style="color:var(--coral);" id="tax-filings-sub">-</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-orange"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2l6 3v4c0 4-2.6 6.8-6 8-3.4-1.2-6-4-6-8V5l6-3z" stroke="#e65100" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 6.5v4" stroke="#e65100" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <div class="stat-info">
+        <div class="stat-value" id="tax-certs-stat">0</div>
+        <div class="stat-label">Exemption Certificates Expiring Soon</div>
+        <div class="stat-change" style="color:var(--orange);">Within 60 days</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-green"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="#2e7d32" stroke-width="1.6"/><path d="M13.2 13.2L17 17" stroke="#2e7d32" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <div class="stat-info">
+        <div class="stat-value" id="tax-tins-stat">0</div>
+        <div class="stat-label">TIN Mismatches</div>
+        <div class="stat-change" style="color:var(--orange);">Awaiting B-notice review</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TABS ═══ -->
+  <div class="page-tabs" id="taxtabs">
+    <button class="page-tab active" data-tab="salesuse" onclick="switchTab('taxtabs','salesuse')">Sales &amp; Use Tax</button>
+    <button class="page-tab" data-tab="payroll" onclick="switchTab('taxtabs','payroll')">Payroll Tax</button>
+    <button class="page-tab" data-tab="filing1099" onclick="switchTab('taxtabs','filing1099')">1099 Filing</button>
+    <button class="page-tab" data-tab="liability" onclick="switchTab('taxtabs','liability')">Tax Liability Summary</button>
+  </div>
+
+  <!-- ── SALES & USE TAX ── -->
+  <div class="tab-panel active" data-panel="salesuse">
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Nexus Management</div>
+        <div class="table-head-actions">
+          <input class="filter-input" id="nexusFilter" data-filter-input="nexusTable" placeholder="Filter by state…">
+          <button class="btn btn-outline btn-sm" onclick="addJurisdiction()">Register Nexus</button>
+        </div>
+      </div>
+      <table class="data-table" id="nexusTable">
+        <thead>
+          <tr><th>State</th><th>Nexus Status</th><th>Registration Date</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Texas</strong></td><td><span class="badge badge-green">Registered</span></td><td>2021-11-02</td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div class="card-title">Rate Engine Lookup</div>
+        <span class="badge badge-navy">Combined State + County + City</span>
+      </div>
+      <div class="card-body">
+        <div class="tax-lookup-row">
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="field-label">ZIP+4</label>
+            <input class="field-input" id="zipLookupInput" placeholder="e.g. 75201-1234">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="lookupRate()">Look Up Rate</button>
+        </div>
+        <div class="tax-lookup-result" id="zipLookupResult"></div>
+        <div class="v-lock-note" style="margin-top:10px;">This lookup only suggests a rate. Nothing posts or changes until you add it to Your Tax Rates below, yourself.</div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Your Tax Rates <span class="v-badge-config">you add and own every rate here</span></div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="toggleAddRateForm()">+ Add Tax Rate</button>
+        </div>
+      </div>
+      <div id="add-rate-form-wrap" style="display:none;padding:14px 16px;border-bottom:1px solid var(--gray-100);">
+        <div class="form-grid-3">
+          <div>
+            <label class="field-label">Jurisdiction *</label>
+            <input class="field-input" id="rate-jurisdiction" placeholder="e.g. Dallas, TX or California State">
+          </div>
+          <div>
+            <label class="field-label">Tax type</label>
+            <select class="field-input" id="rate-type">
+              <option>Sales &amp; Use</option>
+              <option>VAT</option>
+              <option>GST</option>
+              <option>Insurance Premium</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Rate (%) *</label>
+            <input class="field-input" type="number" step="0.01" id="rate-percent" placeholder="e.g. 8.25">
+          </div>
+          <div>
+            <label class="field-label">Effective date</label>
+            <input class="field-input" type="date" id="rate-effective">
+          </div>
+          <div>
+            <label class="field-label">Notes</label>
+            <input class="field-input" id="rate-notes" placeholder="Optional">
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="submitTaxRate()">Add Rate</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddRateForm()">Cancel</button>
+        </div>
+      </div>
+      <table class="data-table" id="myRatesTable">
+        <thead><tr><th>Jurisdiction</th><th>Type</th><th>Rate</th><th>Effective</th><th>Notes</th><th>Added By</th><th></th></tr></thead>
+        <tbody id="myRatesBody">
+          <tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:18px;">No tax rates added yet, use "+ Add Tax Rate" above or the lookup tool to get started.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head-row">
+        <div class="table-head-title">Exemption Certificates</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="addCertificate()">+ Add Certificate</button>
+        </div>
+      </div>
+      <table class="data-table" id="certTable">
+        <thead><tr><th>Customer</th><th>Certificate #</th><th>State</th><th>Expiration Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr id="empty-certs-row"><td colspan="6" style="text-align:center;color:var(--gray-400);padding:18px;">No exemption certificates registered yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PAYROLL TAX ── -->
+  <div class="tab-panel" data-panel="payroll">
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">FICA / FUTA / SUTA Summary</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="exportTableCSV('ficaTable','payroll-tax-summary.csv')">Export</button>
+        </div>
+      </div>
+      <table class="data-table" id="ficaTable">
+        <thead><tr><th>Tax Type</th><th>Rate</th><th>Wage Base</th><th>YTD Withheld</th><th>YTD Employer Match</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Social Security (FICA)</strong></td><td>6.2%</td><td>$168,600</td><td>$0.00</td><td>$0.00</td></tr>
+          <tr><td><strong>Medicare (FICA)</strong></td><td>1.45%</td><td>No cap</td><td>$0.00</td><td>$0.00</td></tr>
+          <tr><td><strong>Additional Medicare</strong></td><td>0.9%</td><td>Over $200,000</td><td>$0.00</td><td> - </td></tr>
+          <tr><td><strong>FUTA</strong></td><td>0.6% (post-credit)</td><td>$7,000</td><td> - </td><td>$0.00</td></tr>
+          <tr><td><strong>SUTA (multi-state avg.)</strong></td><td>2.1% – 4.8%</td><td>Varies by state</td><td> - </td><td>$0.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head-row">
+        <div class="table-head-title">Filing Status - Forms 940 / 941 / 944</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="showToast('Opening filing calendar…','info')">View Calendar</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Form</th><th>Period</th><th>Status</th><th>Due Date</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><strong>Form 941</strong> (Quarterly)</td><td>Q2 2026</td><td><span class="badge badge-green">Filed</span></td><td>2026-07-31</td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td></tr>
+          <tr><td><strong>Form 941</strong> (Quarterly)</td><td>Q3 2026</td><td><span class="badge badge-orange">Pending</span></td><td>2026-10-31</td><td><button class="btn btn-ghost btn-sm" onclick="prepareFiling(this)">Prepare</button></td></tr>
+          <tr><td><strong>Form 940</strong> (Annual FUTA)</td><td>FY 2025</td><td><span class="badge badge-green">Filed</span></td><td>2026-01-31</td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td></tr>
+          <tr><td><strong>Form 944</strong> (Annual)</td><td>FY 2025</td><td><span class="badge badge-navy">Not Applicable</span></td><td> - </td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 1099 FILING ── -->
+  <div class="tab-panel" data-panel="filing1099">
+    <div class="tax-copy">
+      Threshold monitoring covers 1099-NEC and 1099-MISC vendors against the $600 annual reporting threshold; interest, dividend, and retirement filings (1099-INT / 1099-DIV / 1099-R) and government payments (1099-G) route through the same e-Filing queue below. Foreign vendors on file with a W-8BEN are excluded from 1099 thresholds and instead tracked for 1042-S reporting. Form 1096 is generated automatically as the paper transmittal summary when a batch is submitted, and any vendor without a valid W-9 on file is flagged for Form 945 backup withholding at 24%.
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">$600 Threshold Monitoring</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="refreshThresholds()">Refresh Totals</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Vendor</th><th>YTD Paid</th><th style="width:220px;">Progress to Threshold</th><th></th></tr></thead>
+        <tbody id="thresholdBody"></tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">W-9 Collection Status</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="requestMissingW9s()">Request Missing W-9s</button>
+        </div>
+      </div>
+      <table class="data-table" id="w9Table">
+        <thead><tr><th>Vendor</th><th>W-9 Received</th><th>Date</th></tr></thead>
+        <tbody>
+          <tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:18px;">No vendors tracked for W-9 collection.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-head-row">
+        <div class="table-head-title">TIN Matching</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="runTinMatch()">Run TIN Match</button>
+        </div>
+      </div>
+      <table class="data-table" id="tinTable">
+        <thead><tr><th>Vendor</th><th>TIN</th><th>Match Status</th></tr></thead>
+        <tbody>
+          <tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:18px;">No vendors tracked for TIN matching.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head-row">
+        <div class="table-head-title">e-Filing Queue - IRS FIRE</div>
+        <div class="table-head-actions">
+          <button class="btn btn-primary btn-sm" id="submit-batch-btn" onclick="submitNextBatch(this)">Submit Next Batch</button>
+        </div>
+      </div>
+      <table class="data-table" id="fireTable">
+        <thead><tr><th>Batch #</th><th>Form Type</th><th>Vendor Count</th><th>Status</th><th>Submitted Date</th></tr></thead>
+        <tbody>
+          <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:18px;">No electronic filing batches queued.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAX LIABILITY SUMMARY ── -->
+  <div class="tab-panel" data-panel="liability">
+    <div class="table-wrap">
+      <div class="table-head-row">
+        <div class="table-head-title">Consolidated Tax Liability</div>
+        <div class="table-head-actions">
+          <input class="filter-input" id="liabilityFilter" data-filter-input="liabilityTable" placeholder="Filter by status…">
+          <button class="btn btn-outline btn-sm" onclick="exportTableCSV('liabilityTable','tax-liability-summary.csv')">Export</button>
+        </div>
+      </div>
+      <table class="data-table" id="liabilityTable">
+        <thead><tr><th>Tax Type</th><th>Jurisdiction</th><th>Amount Due</th><th>Due Date</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr id="empty-liability-row"><td colspan="5" style="text-align:center;color:var(--gray-400);padding:18px;">No tax liabilities recorded for this period.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // Generic expandable row detail - restates the row's own cells below it
+  function toggleRowDetail(btn) {
+    const row = btn.closest('tr');
+    const table = row.closest('table');
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('detail-expand-row')) {
+      next.remove();
+      btn.textContent = 'View';
+      return;
+    }
+    table.querySelectorAll('.detail-expand-row').forEach(r => r.remove());
+    table.querySelectorAll('tbody tr button').forEach(b => { if (b.textContent === 'Close') b.textContent = 'View'; });
+    const headerCells = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim()).filter(Boolean);
+    const cells = [...row.children].map(td => td.textContent.trim());
+    const detail = document.createElement('tr');
+    detail.className = 'detail-expand-row';
+    const detailHtml = headerCells.map((h, i) => `<strong>${h}:</strong> ${cells[i] || '-'}`).join(' &nbsp;·&nbsp; ');
+    detail.innerHTML = `<td colspan="${row.children.length}" style="background:#f8f9fb;padding:10px 14px;font-size:12px;color:var(--gray-600);">${detailHtml}</td>`;
+    row.after(detail);
+    btn.textContent = 'Close';
+  }
+
+  // Nexus Management - add a jurisdiction row
+  function addJurisdiction() {
+    const state = window.prompt('State to register for nexus (e.g. Nevada):');
+    if (!state || !state.trim()) return;
+    const tbody = document.querySelector('#nexusTable tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong>${state.trim()}</strong></td><td><span class="badge badge-orange">Pending Registration</span></td><td> - </td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td>`;
+    tbody.appendChild(tr);
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast(state.trim() + ' added to nexus tracking - registration pending', 'success');
+  }
+
+  // Exemption Certificates - add a new certificate
+  function addCertificate() {
+    const customer = window.prompt('Customer name for the new exemption certificate:');
+    if (!customer || !customer.trim()) return;
+    const tbody = document.querySelector('#certTable tbody');
+    const certNum = 'EX-' + Math.floor(10000 + Math.random() * 89999);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${customer.trim()}</td><td>${certNum}</td><td> - </td><td> - </td><td><span class="badge badge-orange">Pending Review</span></td><td><button class="btn btn-ghost btn-sm" onclick="toggleRowDetail(this)">View</button></td>`;
+    tbody.appendChild(tr);
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('Certificate ' + certNum + ' added for ' + customer.trim(), 'success');
+  }
+
+  function renewCertificate(btn) {
+    const row = btn.closest('tr');
+    const badge = row.querySelector('.badge');
+    if (badge) { badge.className = 'badge badge-blue'; badge.textContent = 'Renewal Requested'; }
+    btn.disabled = true;
+    btn.textContent = 'Requested';
+    showToast('Renewal request sent to ' + row.children[0].textContent, 'success');
+  }
+
+  function prepareFiling(btn) {
+    const row = btn.closest('tr');
+    const badge = row.querySelector('.badge');
+    if (badge) { badge.className = 'badge badge-blue'; badge.textContent = 'Draft In Progress'; }
+    btn.textContent = 'Continue';
+    btn.setAttribute('onclick', 'toggleRowDetail(this)');
+    showToast('Draft started for ' + row.children[0].textContent.trim(), 'success');
+  }
+
+  function refreshThresholds() {
+    THRESHOLD_VENDORS.forEach(v => { v.ytd = Math.round(v.ytd * (1 + Math.random() * 0.04)); });
+    renderThresholds();
+    showToast('YTD vendor totals refreshed', 'success');
+  }
+
+  function requestMissingW9s() {
+    const rows = document.querySelectorAll('#w9Table tbody tr');
+    let count = 0;
+    rows.forEach(row => {
+      const badge = row.querySelector('.badge');
+      if (badge && badge.textContent.trim() === 'Missing') {
+        badge.className = 'badge badge-orange';
+        badge.textContent = 'Pending';
+        row.children[2].textContent = 'Requested ' + new Date().toISOString().slice(0,10);
+        count++;
+      }
+    });
+    showToast(count ? (count + ' W-9 request(s) sent') : 'All vendors already have a W-9 on file or request pending', count ? 'success' : 'info');
+  }
+
+  function runTinMatch() {
+    const rows = document.querySelectorAll('#tinTable tbody tr');
+    let count = 0;
+    rows.forEach(row => {
+      const badge = row.querySelector('.badge');
+      if (badge && badge.textContent.trim() === 'Pending') {
+        badge.className = 'badge badge-green';
+        badge.textContent = 'Matched';
+        count++;
+      }
+    });
+    showToast(count ? (count + ' vendor(s) matched by IRS TIN Matching') : 'Batch submitted to IRS TIN Matching - no pending vendors to resolve', 'success');
+  }
+
+  function submitNextBatch(btn) {
+    const rows = document.querySelectorAll('#fireTable tbody tr');
+    let submitted = false;
+    for (const row of rows) {
+      const badge = row.querySelector('.badge');
+      if (badge && (badge.textContent.trim() === 'Pending Transmission' || badge.textContent.trim() === 'Queued')) {
+        badge.className = 'badge badge-green';
+        badge.textContent = 'Transmitted';
+        row.children[4].textContent = new Date().toISOString().slice(0,10);
+        submitted = true;
+        break;
+      }
+    }
+    showToast(submitted ? 'Batch submitted to IRS FIRE system' : 'No batches waiting to submit', submitted ? 'success' : 'info');
+  }
+
+  const THRESHOLD_VENDORS = [];
+
+  function renderThresholds() {
+    document.getElementById('thresholdBody').innerHTML = THRESHOLD_VENDORS.map(v => {
+      const pct = Math.min(100, Math.round((v.ytd / 600) * 100));
+      const over = v.ytd >= 600;
+      return `<tr>
+        <td>${v.name}</td>
+        <td>$${v.ytd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td>
+          <div class="tax-progress-row">
+            <div class="tax-progress-track"><div class="tax-progress-fill ${over ? 'over' : ''}" style="width:${pct}%;"></div></div>
+            <span class="tax-progress-label">${pct}% of $600</span>
+          </div>
+        </td>
+        <td>${over ? '<span class="badge badge-orange">1099 Required</span>' : '<span class="badge badge-gray">Below Threshold</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function exportActiveTaxTable() {
+    const activePanel = document.querySelector('#taxtabs .page-tab.active')?.dataset.tab;
+    const tableByTab = { salesuse: 'nexusTable', payroll: 'ficaTable', filing1099: 'fireTable', liability: 'liabilityTable' };
+    const tableId = tableByTab[activePanel] || 'nexusTable';
+    exportTableCSV(tableId, 'tax-engine-' + (activePanel||'export') + '.csv');
+  }
+
+  const ZIP_RATE_TABLE = {
+    '75201': { state: 6.25, county: 1.00, city: 1.00 },
+    '90001': { state: 7.25, county: 0.50, city: 1.00 },
+    '10001': { state: 4.00, county: 0.50, city: 4.50 },
+    '60601': { state: 6.25, county: 1.75, city: 1.25 },
+  };
+
+  function lookupRate() {
+    const raw = document.getElementById('zipLookupInput').value.trim();
+    const zip5 = raw.replace(/\D/g, '').slice(0, 5);
+    const result = document.getElementById('zipLookupResult');
+    if (zip5.length !== 5) {
+      showToast('Enter a valid 5-digit ZIP (or ZIP+4)', 'error');
+      return;
+    }
+    const rates = ZIP_RATE_TABLE[zip5] || { state: 6.00, county: 0.75, city: 0.75 };
+    const combined = (rates.state + rates.county + rates.city).toFixed(2);
+    result.innerHTML = `<strong>Combined Rate: ${combined}%</strong> - State ${rates.state.toFixed(2)}% · County ${rates.county.toFixed(2)}% · City ${rates.city.toFixed(2)}% <span style="color:var(--gray-400);">(ZIP ${zip5})</span>
+      <button class="btn btn-outline btn-sm" style="margin-left:10px;" onclick="prefillRateForm('${zip5}', ${combined})">+ Add this rate to Your Tax Rates</button>`;
+    result.classList.add('show');
+    showToast(`Rate lookup complete for ${zip5}, review and add it yourself below if it's correct`, 'success');
+  }
+
+  /* ---------- Your Tax Rates: added by the user, never auto-derived from sales ---------- */
+  let MY_TAX_RATES = [];
+
+  function toggleAddRateForm() {
+    const wrap = document.getElementById('add-rate-form-wrap');
+    wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+  }
+
+  function prefillRateForm(zip5, combinedRate) {
+    document.getElementById('add-rate-form-wrap').style.display = '';
+    document.getElementById('rate-jurisdiction').value = 'ZIP ' + zip5;
+    document.getElementById('rate-percent').value = combinedRate;
+    document.getElementById('rate-notes').value = 'From Rate Engine Lookup, confirm before relying on this';
+    document.getElementById('rate-jurisdiction').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function submitTaxRate() {
+    const jurisdiction = document.getElementById('rate-jurisdiction').value.trim();
+    const percent = parseFloat(document.getElementById('rate-percent').value);
+    if (!jurisdiction) { showToast('Enter a jurisdiction', 'warning'); return; }
+    if (isNaN(percent) || percent < 0) { showToast('Enter a valid rate percentage', 'warning'); return; }
+    const rate = {
+      jurisdiction,
+      type: document.getElementById('rate-type').value,
+      percent,
+      effective: document.getElementById('rate-effective').value || today(),
+      notes: document.getElementById('rate-notes').value.trim() || ' - ',
+      addedBy: getCurrentUser().name,
+    };
+    MY_TAX_RATES.unshift(rate);
+    renderMyRates();
+    ['rate-jurisdiction', 'rate-percent', 'rate-notes'].forEach(id => { document.getElementById(id).value = ''; });
+    toggleAddRateForm();
+    showToast(`Tax rate added for ${rate.jurisdiction}: ${rate.percent}%`, 'success');
+  }
+
+  function removeMyRate(idx) {
+    MY_TAX_RATES.splice(idx, 1);
+    renderMyRates();
+    showToast('Tax rate removed', 'info');
+  }
+
+  function renderMyRates() {
+    const body = document.getElementById('myRatesBody');
+    if (!MY_TAX_RATES.length) {
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:18px;">No tax rates added yet, use "+ Add Tax Rate" above or the lookup tool to get started.</td></tr>';
+      return;
+    }
+    body.innerHTML = MY_TAX_RATES.map((r, i) => `
+      <tr>
+        <td><strong>${r.jurisdiction}</strong></td>
+        <td><span class="badge badge-navy">${r.type}</span></td>
+        <td>${r.percent.toFixed(2)}%</td>
+        <td>${r.effective}</td>
+        <td class="text-muted">${r.notes}</td>
+        <td class="text-muted">${r.addedBy}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="removeMyRate(${i})">Remove</button></td>
+      </tr>`).join('');
+  }
+
+  renderThresholds();
+  renderTaxFromSubledger();
+
+  function renderTaxFromSubledger() {
+    const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
+    const bType = active ? active.businessType : 'mga';
+    
+    // Resolve DB key
+    let dbKey = 'mga_v_gl_journal_entries';
+    if (bType === 'carrier') {
+      dbKey = 'carrier_v_gl_journal_entries';
+    }
+    
+    let jes = [];
+    try {
+      const raw = localStorage.getItem(dbKey);
+      if (raw) jes = JSON.parse(raw);
+    } catch(e) {}
+    
+    // Aggregate Account 2300 balances by state
+    const stateTaxes = {};
+    jes.forEach(je => {
+      if (je.status === 'posted') {
+        je.lines.forEach(l => {
+          if (l.acct === '2300') {
+            const stateCode = (l.dims && l.dims.state) ? l.dims.state : 'TX';
+            const creditVal = parseFloat(l.credit) || 0;
+            const debitVal = parseFloat(l.debit) || 0;
+            stateTaxes[stateCode] = (stateTaxes[stateCode] || 0) + (creditVal - debitVal);
+          }
+        });
+      }
+    });
+
+    const stateNames = {
+      'TX': 'Texas',
+      'CA': 'California',
+      'FL': 'Florida',
+      'NY': 'New York',
+      'GA': 'Georgia',
+    };
+
+    const tbody = document.querySelector('#liabilityTable tbody');
+    let totalTaxDue = 0;
+    let filingsCount = 0;
+    
+    if (tbody) {
+      const states = Object.keys(stateTaxes);
+      let rowsHtml = '';
+      states.forEach(code => {
+        const amt = stateTaxes[code];
+        if (amt > 0) {
+          totalTaxDue += amt;
+          filingsCount++;
+          const stateName = stateNames[code] || code;
+          rowsHtml += `
+            <tr>
+              <td>Insurance Premium Tax</td>
+              <td><strong>${stateName}</strong></td>
+              <td>$${amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>2026-09-20</td>
+              <td><span class="badge badge-orange">Due Soon</span></td>
+            </tr>
+          `;
+        }
+      });
+      
+      if (filingsCount > 0) {
+        tbody.innerHTML = rowsHtml;
+      } else {
+        tbody.innerHTML = '<tr id="empty-liability-row"><td colspan="5" style="text-align:center;color:var(--gray-400);padding:18px;">No tax liabilities recorded for this period.</td></tr>';
+      }
+    }
+    
+    // Update stats cards
+    const earnedValEl = document.getElementById('tax-liability-stat');
+    const filingsValEl = document.getElementById('tax-filings-stat');
+    const filingsSubEl = document.getElementById('tax-filings-sub');
+    
+    if (earnedValEl) {
+      earnedValEl.textContent = '$' + totalTaxDue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    if (filingsValEl) {
+      filingsValEl.textContent = filingsCount;
+    }
+    if (filingsSubEl) {
+      filingsSubEl.textContent = filingsCount > 0 ? `${filingsCount} pending filings` : 'No filings due';
+    }
+
+    // Dynamic certificate count
+    const certRowsCount = document.querySelectorAll('#certTable tbody tr:not(#empty-certs-row)').length;
+    const certsValEl = document.getElementById('tax-certs-stat');
+    if (certsValEl) {
+      certsValEl.textContent = certRowsCount;
+    }
+  }
+</script>
+<script src="js/app.js"></script>
+<script>
+  initLayout('tax');
+</script>
+</body>
+</html>

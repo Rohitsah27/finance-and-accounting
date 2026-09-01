@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #1A1D23;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing & Invoicing — Revenue | VeriDex</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    @media print {
+      body.printing-pdf .sidebar,
+      body.printing-pdf .app-header,
+      body.printing-pdf .main-content > *:not(#mi-invoice-doc-wrap) { display: none !important; }
+      body.printing-pdf .main-content { margin: 0 !important; padding: 0 !important; }
+      body.printing-pdf #mi-invoice-doc-wrap { display: block !important; }
+      .no-print { display: none !important; }
+    }
+    .bi-pdf-doc { max-width: 720px; margin: 0 auto; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 32px; background: #fff; font-family: Georgia, 'Times New Roman', serif; }
+    .bi-pdf-brand { display: flex; align-items: center; gap: 10px; }
+    .bi-pdf-brand-mark { width: 34px; height: 34px; border-radius: 8px; background: var(--v-teal); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-family: -apple-system, sans-serif; flex-shrink: 0; }
+    .bi-pdf-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px double var(--v-ink); padding-bottom: 14px; }
+    .bi-pdf-doctitle { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: var(--v-ink); }
+    .bi-pdf-doc table.data-table { font-family: -apple-system, sans-serif; }
+    .bi-pdf-footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--gray-200); font-size: 10.5px; color: var(--gray-400); font-family: -apple-system, sans-serif; }
+  </style>
+  <script src="js/components.js"></script>
+  <script src="js/config-engine.js"></script>
+  <script src="js/gl-engine.js"></script>
+  <script src="js/insurance-ops.js"></script>
+  <script src="js/layout.js"></script>
+</head>
+<body>
+  <main class="main-content" id="main-content">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Billing &amp; Invoicing</div>
+        <div class="page-subtitle">Customer invoicing across every billing model - one-time, recurring, milestone, and insurance premium invoices</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-outline" onclick="exportRegister(this)">Export</button>
+        <button class="btn btn-primary" id="new-inv-btn" onclick="toggleNewInvoiceForm()">+ New Invoice</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon si-navy"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2" width="14" height="16" rx="1.5" stroke="#102a2e" stroke-width="1.6"/><path d="M6.5 6.5h7M6.5 10h7M6.5 13.5h4" stroke="#102a2e" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$1,284,600</div><div class="stat-label">Total Invoiced (MTD)</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-orange"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#e65100" stroke-width="1.6"/><path d="M10 6v4l3 2" stroke="#e65100" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$618,240</div><div class="stat-label">Outstanding</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-coral"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4v7M10 15v1" stroke="#c9791f" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="10" r="7.5" stroke="#c9791f" stroke-width="1.4"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$142,880</div><div class="stat-label">Overdue</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-green"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 12l4-5 3 3 6-7" stroke="#2e7d32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$96,400 <span style="font-size:12px;color:var(--gray-400);font-weight:600;">/mo</span></div><div class="stat-label">Recurring Revenue (MRR)</div></div>
+      </div>
+    </div>
+
+    <!-- New Invoice inline form -->
+    <div class="form-card" id="new-inv-form" style="display:none;margin-bottom:20px;padding:20px;">
+      <div style="font-size:14px;font-weight:700;color:var(--gray-900);margin-bottom:16px;">New Invoice</div>
+      <div class="form-grid-3">
+        <div class="form-field">
+          <label class="field-label">Customer</label>
+          <select class="field-input field-select">
+            <option>AC Wholesale Distribution</option>
+            <option>AC Retail Stores</option>
+            <option>Meridian Logistics LLC</option>
+            <option>Harborview Medical Group</option>
+            <option>Crestpoint Property Management</option>
+            <option>Southlake Insurance Co. (Policyholder Billing)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Invoice Type</label>
+          <select class="field-input field-select" id="new-inv-type">
+            <option>Standard</option>
+            <option>Pro-Forma</option>
+            <option>Recurring</option>
+            <option>Progress Billing</option>
+            <option>Milestone</option>
+            <option>Retainer</option>
+            <option>Premium Invoice</option>
+            <option>Debit Note</option>
+            <option>Credit Note</option>
+            <option>Intercompany</option>
+            <option>Deposit</option>
+            <option>Consolidated</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Due Date</label>
+          <input type="date" class="field-input" value="2026-09-19">
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 8px;">Line Items</div>
+      <table class="data-table" style="margin-bottom:12px;">
+        <thead><tr><th>Description</th><th style="width:90px;">Qty</th><th style="width:120px;">Unit Price</th><th style="width:120px;" class="text-right">Amount</th><th style="width:36px;"></th></tr></thead>
+        <tbody id="new-inv-lines">
+          <tr>
+            <td><input type="text" class="field-input" value="Professional services - implementation" style="background:#fff;"></td>
+            <td><input type="number" class="field-input" value="1" min="0" style="background:#fff;" oninput="calcLineAmount(this)"></td>
+            <td><input type="text" class="field-input" value="4,800.00" style="background:#fff;" oninput="calcLineAmount(this)"></td>
+            <td class="text-right font-semibold">$4,800.00</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="removeInvoiceLine(this)" title="Remove line">&times;</button></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" class="text-right font-semibold" style="border-top:1px solid var(--gray-200);">Total</td>
+            <td class="text-right font-semibold" id="new-inv-total" style="border-top:1px solid var(--gray-200);">$4,800.00</td>
+            <td style="border-top:1px solid var(--gray-200);"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn btn-outline btn-sm" onclick="addInvoiceLine()">+ Add Line</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline" onclick="toggleNewInvoiceForm()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitNewInvoice()">Save Invoice</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="filter-bar-label">Filters:</span>
+      <select class="filter-select" id="f-type" onchange="applyInvFilters()">
+        <option value="">All Invoice Types</option>
+        <option>Standard</option>
+        <option>Pro-Forma</option>
+        <option>Recurring</option>
+        <option>Progress Billing</option>
+        <option>Milestone</option>
+        <option>Retainer</option>
+        <option>Premium Invoice</option>
+        <option>Debit Note</option>
+        <option>Credit Note</option>
+        <option>Intercompany</option>
+        <option>Deposit</option>
+        <option>Consolidated</option>
+      </select>
+      <select class="filter-select" id="f-status" onchange="applyInvFilters()">
+        <option value="">All Status</option>
+        <option>Draft</option>
+        <option>Sent</option>
+        <option>Partially Paid</option>
+        <option>Paid</option>
+        <option>Overdue</option>
+        <option>Collections</option>
+        <option>Voided</option>
+      </select>
+      <select class="filter-select" id="f-customer" onchange="applyInvFilters()">
+        <option value="">All Customers</option>
+        <option>AC Wholesale Distribution</option>
+        <option>AC Retail Stores</option>
+        <option>Meridian Logistics LLC</option>
+        <option>Harborview Medical Group</option>
+        <option>Crestpoint Property Management</option>
+        <option>Southlake Insurance Co.</option>
+      </select>
+      <div class="filter-spacer"></div>
+      <input type="text" class="filter-input" placeholder="Search invoice, customer..." id="inv-search" oninput="applyInvFilters()" style="width:220px;">
+    </div>
+
+    <!-- Activity Log (backend-style actions leave a visible trace here) -->
+    <div class="table-wrap" id="billing-activity-log" style="display:none;margin-bottom:16px;">
+      <div class="table-head-row"><div class="table-head-title">Activity Log</div></div>
+      <div class="log-body" style="padding:6px 16px 10px;"></div>
+    </div>
+
+    <!-- Generate MGA Premium Invoice: real, pulls actual unbilled bound policies -->
+    <div class="form-card" style="margin-bottom:20px;padding:20px;">
+      <div class="card-title">Generate MGA Premium Invoice <span class="v-badge-config" style="margin-left:6px;">real, from Premium &amp; Claims</span></div>
+      <div class="form-grid-3" style="margin-top:12px;">
+        <div>
+          <label class="field-label">MGA</label>
+          <select class="field-input" id="mi-mga-select" onchange="renderUnbilledPreview()"></select>
+        </div>
+        <div style="grid-column:span 2;">
+          <div id="mi-unbilled-preview" style="font-size:12.5px;color:var(--gray-500);padding-top:22px;"></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-primary btn-sm" onclick="onGenerateMgaInvoice()">Generate Invoice</button>
+      </div>
+      <div id="mi-invoice-doc-wrap" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- Invoice Register -->
+    <div class="table-wrap" style="margin-bottom:24px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Invoice Register</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="sendReminders(this)">Send Reminders</button>
+        </div>
+      </div>
+      <table class="data-table" id="inv-table" data-table-init>
+        <thead>
+          <tr>
+            <th><input type="checkbox" class="table-check"></th>
+            <th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue Date</th><th>Due Date</th>
+            <th class="text-right">Amount</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-type="Standard" data-status="Paid" data-customer="Harborview Medical Group">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">INV-30841</td><td>Harborview Medical Group</td>
+            <td><span class="badge badge-navy">Standard</span></td>
+            <td>08/03/2026</td><td>09/02/2026</td>
+            <td class="text-right font-semibold">$18,420</td>
+            <td><span class="badge badge-green">Paid</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Pro-Forma" data-status="Draft" data-customer="Crestpoint Property Management">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">PF-30842</td><td>Crestpoint Property Management</td>
+            <td><span class="badge badge-gray">Pro-Forma</span></td>
+            <td>08/12/2026</td><td>09/11/2026</td>
+            <td class="text-right font-semibold">$62,000</td>
+            <td><span class="badge badge-gray">Draft</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="convertProForma(this)">Convert</button></td>
+          </tr>
+          <tr data-type="Recurring" data-status="Sent" data-customer="AC Retail Stores">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">REC-30843</td><td>AC Retail Stores</td>
+            <td><span class="badge badge-blue">Recurring</span></td>
+            <td>08/01/2026</td><td>08/31/2026</td>
+            <td class="text-right font-semibold">$8,200</td>
+            <td><span class="badge badge-blue">Sent</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Progress Billing" data-status="Partially Paid" data-customer="Meridian Logistics LLC">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">PB-30844</td><td>Meridian Logistics LLC</td>
+            <td><span class="badge badge-orange">Progress Billing (65%)</span></td>
+            <td>07/28/2026</td><td>08/27/2026</td>
+            <td class="text-right font-semibold">$214,500</td>
+            <td><span class="badge badge-orange">Partially Paid</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Milestone" data-status="Sent" data-customer="Meridian Logistics LLC">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">MS-30845</td><td>Meridian Logistics LLC</td>
+            <td><span class="badge badge-navy">Milestone - Phase 2</span></td>
+            <td>08/05/2026</td><td>09/04/2026</td>
+            <td class="text-right font-semibold">$85,000</td>
+            <td><span class="badge badge-blue">Sent</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Retainer" data-status="Paid" data-customer="Crestpoint Property Management">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">RT-30846</td><td>Crestpoint Property Management</td>
+            <td><span class="badge badge-gray">Retainer</span></td>
+            <td>08/01/2026</td><td>08/01/2026</td>
+            <td class="text-right font-semibold">$12,500</td>
+            <td><span class="badge badge-green">Paid</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Premium Invoice" data-status="Overdue" data-customer="Southlake Insurance Co.">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">PRM-30847</td><td>Southlake Insurance Co. - Policy POL-TX-2026-9102</td>
+            <td><span class="badge badge-red">Premium Invoice</span></td>
+            <td>07/05/2026</td><td>08/04/2026</td>
+            <td class="text-right font-semibold">$58,400</td>
+            <td><span class="badge badge-red">Overdue</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="escalateInvoice(this)">Escalate</button></td>
+          </tr>
+          <tr data-type="Debit Note" data-status="Sent" data-customer="AC Wholesale Distribution">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">DN-30848</td><td>AC Wholesale Distribution</td>
+            <td><span class="badge badge-orange">Debit Note</span></td>
+            <td>08/09/2026</td><td>09/08/2026</td>
+            <td class="text-right font-semibold">$3,240</td>
+            <td><span class="badge badge-blue">Sent</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Credit Note" data-status="Paid" data-customer="AC Retail Stores">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">CN-30849</td><td>AC Retail Stores</td>
+            <td><span class="badge badge-green">Credit Note</span></td>
+            <td>08/10/2026</td><td> - </td>
+            <td class="text-right font-semibold">-$1,860</td>
+            <td><span class="badge badge-green">Applied</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Intercompany" data-status="Sent" data-customer="AC Wholesale Distribution">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">IC-30850</td><td>AC Wholesale Distribution ← AC Manufacturing Inc.</td>
+            <td><span class="badge badge-navy">Intercompany</span></td>
+            <td>08/01/2026</td><td>08/31/2026</td>
+            <td class="text-right font-semibold">$412,000</td>
+            <td><span class="badge badge-blue">Sent</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Deposit" data-status="Paid" data-customer="Harborview Medical Group">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">DEP-30851</td><td>Harborview Medical Group</td>
+            <td><span class="badge badge-gray">Deposit</span></td>
+            <td>07/20/2026</td><td>07/20/2026</td>
+            <td class="text-right font-semibold">$10,000</td>
+            <td><span class="badge badge-green">Paid</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+          <tr data-type="Consolidated" data-status="Sent" data-customer="Crestpoint Property Management">
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">CON-30852</td><td>Crestpoint Property Management (5 properties)</td>
+            <td><span class="badge badge-navy">Consolidated</span></td>
+            <td>08/15/2026</td><td>09/14/2026</td>
+            <td class="text-right font-semibold">$96,400</td>
+            <td><span class="badge badge-blue">Sent</span></td>
+            <td><button class="btn btn-ghost btn-sm">View</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recurring Invoice Schedules -->
+    <div class="table-wrap">
+      <div class="table-head-row">
+        <div class="table-head-title">Recurring Invoice Schedules</div>
+        <div class="table-head-actions">
+          <button class="btn btn-outline btn-sm" onclick="toggleNewPlanForm()">+ New Plan</button>
+        </div>
+      </div>
+      <div class="form-card" id="new-plan-form" style="display:none;margin:0 16px 16px;padding:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:12px;">New Recurring Plan</div>
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label class="field-label">Plan Name</label>
+            <input type="text" class="field-input" id="np-name" placeholder="e.g. Meridian - Monthly Support">
+          </div>
+          <div class="form-field">
+            <label class="field-label">Customer</label>
+            <select class="field-input field-select" id="np-customer">
+              <option>AC Wholesale Distribution</option>
+              <option>AC Retail Stores</option>
+              <option>Meridian Logistics LLC</option>
+              <option>Harborview Medical Group</option>
+              <option>Crestpoint Property Management</option>
+              <option>Southlake Insurance Co.</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Frequency</label>
+            <select class="field-input field-select" id="np-freq">
+              <option>Weekly</option>
+              <option>Monthly</option>
+              <option>Quarterly</option>
+              <option>Annual</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label class="field-label">Amount</label>
+            <input type="number" class="field-input" id="np-amount" placeholder="0.00" min="0">
+          </div>
+          <div class="form-field">
+            <label class="field-label">Next Run Date</label>
+            <input type="date" class="field-input" id="np-date" value="2026-09-01">
+          </div>
+          <div class="form-field">
+            <label class="field-label">Auto-Post</label>
+            <label class="v-switch" style="margin-top:6px;"><input type="checkbox" id="np-autopost" checked><span class="v-slider"></span></label>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
+          <button class="btn btn-outline" onclick="toggleNewPlanForm()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitNewPlan()">Save Plan</button>
+        </div>
+      </div>
+      <table class="data-table" id="billing-plans-table">
+        <thead><tr><th>Plan Name</th><th>Customer</th><th>Frequency</th><th class="text-right">Amount</th><th>Next Run Date</th><th>Auto-Post</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="font-semibold">AC Retail - Monthly License</td><td>AC Retail Stores</td><td>Monthly</td>
+            <td class="text-right">$8,200</td><td>09/01/2026</td>
+            <td><label class="v-switch"><input type="checkbox" checked onchange="toggleAutoPost(this)"><span class="v-slider"></span></label></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">Crestpoint - Quarterly Retainer</td><td>Crestpoint Property Management</td><td>Quarterly</td>
+            <td class="text-right">$37,500</td><td>10/01/2026</td>
+            <td><label class="v-switch"><input type="checkbox" checked onchange="toggleAutoPost(this)"><span class="v-slider"></span></label></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">Harborview - Annual Maintenance</td><td>Harborview Medical Group</td><td>Annual</td>
+            <td class="text-right">$54,000</td><td>01/15/2027</td>
+            <td><label class="v-switch"><input type="checkbox" onchange="toggleAutoPost(this)"><span class="v-slider"></span></label></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">AC Wholesale - Weekly Consignment</td><td>AC Wholesale Distribution</td><td>Weekly</td>
+            <td class="text-right">$14,750</td><td>08/24/2026</td>
+            <td><label class="v-switch"><input type="checkbox" checked onchange="toggleAutoPost(this)"><span class="v-slider"></span></label></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    initLayout('billing');
+
+    /* ---------- Generate MGA Premium Invoice: real, from bound policies ---------- */
+    function renderMiMgaSelect() {
+      const sel = document.getElementById('mi-mga-select');
+      const mgas = getMGAs();
+      sel.innerHTML = mgas.length
+        ? mgas.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
+        : '<option value="">No MGAs yet, add one on MGA Operations</option>';
+      renderUnbilledPreview();
+    }
+
+    function renderUnbilledPreview() {
+      const mgaId = document.getElementById('mi-mga-select').value;
+      const preview = document.getElementById('mi-unbilled-preview');
+      if (!mgaId) { preview.textContent = ''; return; }
+      const unbilled = unbilledPoliciesForMGA(mgaId);
+      if (!unbilled.length) {
+        preview.innerHTML = '<span style="color:var(--gray-400);">No unbilled bound policies for this MGA, bind some on Premium &amp; Claims first.</span>';
+      } else {
+        const total = unbilled.reduce((s, p) => s + p.premium, 0);
+        preview.innerHTML = '<strong>' + unbilled.length + ' unbilled polic' + (unbilled.length === 1 ? 'y' : 'ies') + '</strong>, totaling <strong>' + fmtCurrency(total) + '</strong>: ' + unbilled.map(p => p.policyNumber).join(', ');
+      }
+    }
+
+    function onGenerateMgaInvoice() {
+      const mgaId = document.getElementById('mi-mga-select').value;
+      if (!mgaId) { showToast('Add an MGA on MGA Operations first', 'warning'); return; }
+      try {
+        const invoice = generateInvoiceForMGA(mgaId);
+        addInvoiceToRegister(invoice);
+        renderUnbilledPreview();
+        renderMgaInvoiceDoc(invoice);
+        showToast(invoice.invoiceNumber + ' generated for ' + fmtCurrency(invoice.total), 'success');
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    function addInvoiceToRegister(invoice) {
+      const tbody = document.querySelector('#inv-table tbody');
+      if (!tbody) return;
+      const row = document.createElement('tr');
+      row.dataset.type = 'Premium Invoice';
+      row.dataset.status = 'Issued';
+      row.dataset.customer = invoice.to;
+      row.innerHTML = `
+        <td><input type="checkbox" class="table-check"></td>
+        <td class="cell-link">${invoice.invoiceNumber}</td><td>${invoice.to}</td>
+        <td><span class="badge badge-navy">Premium Invoice</span></td>
+        <td>${new Date(invoice.date).toLocaleDateString('en-US')}</td><td> - </td>
+        <td class="text-right font-semibold">${fmtCurrency(invoice.total)}</td>
+        <td><span class="badge badge-orange">Issued</span></td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="renderMgaInvoiceDoc(getInvoices().find(i=>i.id==='${invoice.id}'))">View</button>
+          <button class="btn btn-ghost btn-sm" onclick="onPostMgaInvoiceJE('${invoice.id}', this)">Post to Ledger</button>
+        </td>`;
+      tbody.insertBefore(row, tbody.firstChild);
+      initTableSelection('inv-table');
+    }
+
+    function onPostMgaInvoiceJE(invoiceId, btn) {
+      const result = postInvoiceJE(invoiceId);
+      const row = btn.closest('tr');
+      const statusCell = row.children[7];
+      if (result.status === 'pending_approval') {
+        statusCell.innerHTML = '<span class="badge badge-orange">Pending Approval</span>';
+        showToast(result.number + ' totals over the approval threshold, routed to Workflow Approvals', 'info');
+      } else {
+        statusCell.innerHTML = '<span class="badge badge-green">Posted</span>';
+        row.dataset.status = 'Posted';
+        showToast(result.number + ' posted to the ledger', 'success');
+      }
+      btn.outerHTML = '<a href="journal-entry.html" class="btn btn-ghost btn-sm">View JE</a>';
+    }
+
+    function printPdfWrap() {
+      document.body.classList.add('printing-pdf');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-pdf'), 300);
+    }
+    window.addEventListener('afterprint', () => document.body.classList.remove('printing-pdf'));
+
+    function renderMgaInvoiceDoc(invoice) {
+      if (!invoice) return;
+      document.getElementById('mi-invoice-doc-wrap').innerHTML = `
+        <div class="bi-pdf-doc">
+          <div class="bi-pdf-head">
+            <div class="bi-pdf-brand">
+              <div class="bi-pdf-brand-mark">SL</div>
+              <div><strong style="font-size:15px;">${invoice.from}</strong><br><span style="color:var(--gray-500);font-size:11px;">500 Market Street, Dallas, TX 75201 &middot; Carrier</span></div>
+            </div>
+            <div class="bi-pdf-doctitle">Invoice</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin:14px 0;">
+            <div style="font-size:12.5px;">Bill To:<br><strong style="font-size:14px;">${invoice.to}</strong><br><span style="color:var(--gray-500);">Managing General Agent</span></div>
+            <div style="text-align:right;font-size:12.5px;">
+              <div>Invoice #: <strong>${invoice.invoiceNumber}</strong></div>
+              <div>Date: <strong>${invoice.date}</strong></div>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Policy #</th><th>Insured</th><th class="r">Premium</th></tr></thead>
+            <tbody>${invoice.lines.map(l => `<tr><td>${l.policyNumber}</td><td>${l.insured}</td><td class="r">${fmtCurrency(l.premium)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr><td colspan="2" style="text-align:right;font-weight:700;">Total Due</td><td class="r" style="font-weight:800;">${fmtCurrency(invoice.total)}</td></tr></tfoot>
+          </table>
+          <div class="bi-pdf-footer">Payment due upon receipt. Remit to Southlake Insurance Co., referencing invoice number ${invoice.invoiceNumber}. Generated ${new Date().toLocaleString()}.</div>
+          <div style="margin-top:14px;" class="no-print"><button class="btn btn-outline btn-sm" onclick="printPdfWrap()">Print / Save as PDF</button></div>
+        </div>`;
+    }
+
+    renderMiMgaSelect();
+
+    function toggleNewInvoiceForm() {
+      const form = document.getElementById('new-inv-form');
+      form.style.display = form.style.display === 'none' ? '' : 'none';
+    }
+
+    function addInvoiceLine() {
+      const tbody = document.getElementById('new-inv-lines');
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><input type="text" class="field-input" placeholder="Description" style="background:#fff;"></td>' +
+        '<td><input type="number" class="field-input" value="1" min="0" style="background:#fff;" oninput="calcLineAmount(this)"></td>' +
+        '<td><input type="text" class="field-input" value="0.00" style="background:#fff;" oninput="calcLineAmount(this)"></td>' +
+        '<td class="text-right font-semibold">$0.00</td>' +
+        '<td><button class="btn btn-ghost btn-sm" onclick="removeInvoiceLine(this)" title="Remove line">&times;</button></td>';
+      tbody.appendChild(tr);
+      updateInvoiceTotal();
+    }
+
+    function removeInvoiceLine(btn) {
+      const tbody = document.getElementById('new-inv-lines');
+      if (tbody.querySelectorAll('tr').length <= 1) {
+        showToast('An invoice needs at least one line item', 'warning');
+        return;
+      }
+      btn.closest('tr').remove();
+      updateInvoiceTotal();
+    }
+
+    function calcLineAmount(inputEl) {
+      const row = inputEl.closest('tr');
+      const qty = parseFloat(row.children[1].querySelector('input').value) || 0;
+      const priceRaw = row.children[2].querySelector('input').value.replace(/,/g, '');
+      const price = parseFloat(priceRaw) || 0;
+      row.children[3].textContent = fmtCurrency(qty * price);
+      updateInvoiceTotal();
+    }
+
+    function updateInvoiceTotal() {
+      let total = 0;
+      document.querySelectorAll('#new-inv-lines tr').forEach(row => {
+        const amountText = row.children[3].textContent.replace(/[^0-9.-]/g, '');
+        total += parseFloat(amountText) || 0;
+      });
+      const totalEl = document.getElementById('new-inv-total');
+      if (totalEl) totalEl.textContent = fmtCurrency(total);
+      return total;
+    }
+
+    const invTypePrefix = {
+      'Standard': 'INV', 'Pro-Forma': 'PF', 'Recurring': 'REC', 'Progress Billing': 'PB',
+      'Milestone': 'MS', 'Retainer': 'RT', 'Premium Invoice': 'PRM', 'Debit Note': 'DN',
+      'Credit Note': 'CN', 'Intercompany': 'IC', 'Deposit': 'DEP', 'Consolidated': 'CON'
+    };
+    const invTypeBadge = {
+      'Standard': 'badge-navy', 'Pro-Forma': 'badge-gray', 'Recurring': 'badge-blue', 'Progress Billing': 'badge-orange',
+      'Milestone': 'badge-navy', 'Retainer': 'badge-gray', 'Premium Invoice': 'badge-red', 'Debit Note': 'badge-orange',
+      'Credit Note': 'badge-green', 'Intercompany': 'badge-navy', 'Deposit': 'badge-gray', 'Consolidated': 'badge-navy'
+    };
+    let nextInvoiceSeq = 30853;
+
+    function submitNewInvoice() {
+      const type = document.getElementById('new-inv-type').value;
+      const customerSelect = document.querySelector('#new-inv-form select.field-select');
+      const customer = customerSelect.value;
+      const dueDateInput = document.querySelector('#new-inv-form input[type="date"]');
+      const dueDate = formatIsoDate(dueDateInput.value);
+      const total = updateInvoiceTotal();
+
+      const prefix = invTypePrefix[type] || 'INV';
+      const invoiceNo = prefix + '-' + (nextInvoiceSeq++);
+      const badgeClass = invTypeBadge[type] || 'badge-navy';
+      const filterCustomer = customer.replace(/\s*\(.*\)$/, '');
+
+      const tbody = document.querySelector('#inv-table tbody');
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-type', type);
+      tr.setAttribute('data-status', 'Draft');
+      tr.setAttribute('data-customer', filterCustomer);
+      tr.innerHTML = '<td><input type="checkbox" class="table-check"></td>' +
+        '<td class="cell-link">' + invoiceNo + '</td><td>' + customer + '</td>' +
+        '<td><span class="badge ' + badgeClass + '">' + type + '</span></td>' +
+        '<td>' + today() + '</td><td>' + dueDate + '</td>' +
+        '<td class="text-right font-semibold">' + fmtCurrency(total) + '</td>' +
+        '<td><span class="badge badge-gray">Draft</span></td>' +
+        '<td><button class="btn btn-ghost btn-sm">View</button></td>';
+      tbody.insertBefore(tr, tbody.firstChild);
+      initTableSelection('inv-table');
+
+      const statValueEl = document.querySelector('.stat-card .stat-value');
+      if (statValueEl) {
+        const current = parseFloat(statValueEl.textContent.replace(/[^0-9.-]/g, '')) || 0;
+        statValueEl.textContent = fmtCurrency(current + total);
+      }
+
+      showToast('New ' + type + ' invoice ' + invoiceNo + ' saved as Draft', 'success');
+      toggleNewInvoiceForm();
+    }
+
+    function formatIsoDate(iso) {
+      if (!iso) return ' - ';
+      const [y, m, d] = iso.split('-');
+      return m + '/' + d + '/' + y;
+    }
+
+    function exportRegister(btn) {
+      logActivity('Invoice register exported to CSV');
+      showToast('Exporting invoice register...', 'info');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Exporting...';
+      setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 1200);
+    }
+
+    function sendReminders() {
+      const count = document.querySelectorAll('#inv-table tbody tr[data-status="Sent"], #inv-table tbody tr[data-status="Overdue"]').length;
+      logActivity('Bulk reminder emails queued for ' + count + ' invoice(s)');
+      showToast('Bulk reminder emails queued', 'info');
+    }
+
+    function logActivity(message) {
+      const wrap = document.getElementById('billing-activity-log');
+      if (!wrap) return;
+      wrap.style.display = '';
+      const body = wrap.querySelector('.log-body');
+      const item = document.createElement('div');
+      item.style.cssText = 'font-size:11.5px;color:var(--gray-600);padding:5px 0;border-top:1px solid var(--gray-100);';
+      item.textContent = today() + ' - ' + message;
+      body.insertBefore(item, body.firstChild);
+    }
+
+    function convertProForma(btn) {
+      const row = btn.closest('tr');
+      const numCell = row.querySelector('.cell-link');
+      numCell.textContent = numCell.textContent.replace('PF-', 'INV-');
+      const typeBadge = row.children[3].querySelector('.badge');
+      typeBadge.className = 'badge badge-navy';
+      typeBadge.textContent = 'Standard';
+      row.setAttribute('data-type', 'Standard');
+      const statusBadge = row.children[7].querySelector('.badge');
+      statusBadge.className = 'badge badge-blue';
+      statusBadge.textContent = 'Sent';
+      row.setAttribute('data-status', 'Sent');
+      btn.textContent = 'View';
+      btn.removeAttribute('onclick');
+      showToast('Pro-forma converted to Standard invoice', 'success');
+    }
+
+    function escalateInvoice(btn) {
+      const row = btn.closest('tr');
+      const numCell = row.querySelector('.cell-link');
+      const statusBadge = row.children[7].querySelector('.badge');
+      statusBadge.className = 'badge badge-red';
+      statusBadge.textContent = 'Collections';
+      row.setAttribute('data-status', 'Collections');
+      btn.disabled = true;
+      btn.textContent = 'Escalated';
+      logActivity(numCell.textContent + ' escalated to collections');
+      showToast('Escalated to collections', 'warning');
+    }
+
+    function toggleAutoPost(cb) {
+      const row = cb.closest('tr');
+      row.style.opacity = cb.checked ? '' : '0.55';
+      showToast('Auto-post ' + (cb.checked ? 'enabled' : 'disabled'), 'info');
+    }
+
+    function toggleNewPlanForm() {
+      const form = document.getElementById('new-plan-form');
+      form.style.display = form.style.display === 'none' ? '' : 'none';
+    }
+
+    function submitNewPlan() {
+      const name = document.getElementById('np-name').value.trim() || 'New Recurring Plan';
+      const customer = document.getElementById('np-customer').value;
+      const freq = document.getElementById('np-freq').value;
+      const amount = parseFloat(document.getElementById('np-amount').value) || 0;
+      const nextRun = formatIsoDate(document.getElementById('np-date').value);
+      const autoPost = document.getElementById('np-autopost').checked;
+
+      const tbody = document.querySelector('#billing-plans-table tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="font-semibold">' + name + '</td><td>' + customer + '</td><td>' + freq + '</td>' +
+        '<td class="text-right">' + fmtCurrency(amount) + '</td><td>' + nextRun + '</td>' +
+        '<td><label class="v-switch"><input type="checkbox" ' + (autoPost ? 'checked' : '') + ' onchange="toggleAutoPost(this)"><span class="v-slider"></span></label></td>';
+      if (!autoPost) tr.style.opacity = '0.55';
+      tbody.appendChild(tr);
+
+      showToast('Recurring plan "' + name + '" created', 'success');
+      document.getElementById('np-name').value = '';
+      document.getElementById('np-amount').value = '';
+      toggleNewPlanForm();
+    }
+
+    function applyInvFilters() {
+      const type = document.getElementById('f-type').value;
+      const status = document.getElementById('f-status').value;
+      const customer = document.getElementById('f-customer').value;
+      const search = document.getElementById('inv-search').value.toLowerCase();
+      document.querySelectorAll('#inv-table tbody tr').forEach(row => {
+        const matchType = !type || row.getAttribute('data-type') === type;
+        const matchStatus = !status || row.getAttribute('data-status') === status;
+        const matchCustomer = !customer || row.getAttribute('data-customer') === customer;
+        const matchSearch = !search || row.textContent.toLowerCase().includes(search);
+        row.style.display = (matchType && matchStatus && matchCustomer && matchSearch) ? '' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "credentials": [
+    { "email": "carrier@gmail.com", "password": "admin@123" },
+    { "email": "mga@gmail.com", "password": "admin@123" },
+    { "email": "broker@gmail.com", "password": "admin@123" },
+    { "email": "insured@gmail.com", "password": "admin@123" }
+  ]
+}

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #1A1D23;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commission Engine — Operations | VeriDex</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/components.js"></script>
+  <script src="js/config-engine.js"></script>
+  <script src="js/layout.js"></script>
+</head>
+<body>
+  <main class="main-content" id="main-content">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Commission Engine</div>
+        <div class="page-subtitle">Producer commission schedules, multi-level agent hierarchies, and statement generation</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-outline" id="export-ledger-btn" onclick="exportLedger(this)">Export</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon si-navy"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#102a2e" stroke-width="1.6"/><path d="M10 6v4l3 2" stroke="#102a2e" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$0</div><div class="stat-label">Commission Payable (This Period)</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-green"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 12l4-5 3 3 6-7" stroke="#2e7d32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="stat-info"><div class="stat-value">$0</div><div class="stat-label">Commission Earned YTD</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-blue"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="1.5" stroke="#1565c0" stroke-width="1.6"/><path d="M3 8h14" stroke="#1565c0" stroke-width="1.4"/></svg></div>
+        <div class="stat-info"><div class="stat-value">6</div><div class="stat-label">Active Plans</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-coral"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4v7M10 15v1" stroke="#c9791f" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="10" r="7.5" stroke="#c9791f" stroke-width="1.4"/></svg></div>
+        <div class="stat-info"><div class="stat-value">0</div><div class="stat-label">Pending Disputes</div></div>
+      </div>
+    </div>
+
+    <!-- Commission Schedules -->
+    <div class="table-wrap" style="margin-bottom:24px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Commission Schedules <span class="v-badge-config">you set every rate here, nothing is pre-computed from sales</span></div>
+        <div class="table-head-actions">
+          <input type="text" class="filter-input" placeholder="Search plan name..." id="cs-search" data-filter-input="cs-table" style="width:220px;">
+          <button class="btn btn-primary btn-sm" onclick="toggleNewPlanForm()">+ New Plan</button>
+        </div>
+      </div>
+      <div id="new-plan-form-wrap" style="display:none;padding:14px 16px;border-bottom:1px solid var(--gray-100);">
+        <div class="form-grid-3">
+          <div>
+            <label class="field-label">Plan name *</label>
+            <input class="field-input" id="np-name" placeholder="e.g. West Region Broker Plan">
+          </div>
+          <div>
+            <label class="field-label">Type *</label>
+            <select class="field-input" id="np-type" onchange="renderTierRows()">
+              <option value="Flat">Flat</option>
+              <option value="Tiered">Tiered</option>
+              <option value="Sliding Scale">Sliding Scale</option>
+              <option value="Volume">Volume</option>
+              <option value="Profit-Sharing">Profit-Sharing</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Effective date</label>
+            <input class="field-input" type="date" id="np-date">
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label class="field-label">Rate(s) *</label>
+          <div id="np-tier-rows"></div>
+          <button class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addTierRow()">+ Add tier / rule</button>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="submitNewPlan()">Save plan</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNewPlanForm()">Cancel</button>
+        </div>
+      </div>
+      <table class="data-table" id="cs-table" data-table-init>
+        <thead>
+          <tr>
+            <th><input type="checkbox" class="table-check"></th>
+            <th>Plan Name</th><th>Type</th><th>Rate / Tier Summary</th><th>Effective Date</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">Standard Agent Flat Plan</td>
+            <td><span class="badge badge-gray">Flat</span></td>
+            <td>15% of gross written premium</td>
+            <td>01/01/2026</td>
+            <td><span class="badge badge-green">Active</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">MGA Tiered Production Plan</td>
+            <td><span class="badge badge-navy">Tiered</span></td>
+            <td>10% up to $500K; 13% $500K&ndash;$1.5M; 16% above $1.5M</td>
+            <td>01/01/2026</td>
+            <td><span class="badge badge-green">Active</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">Sliding Scale  - Commercial Auto</td>
+            <td><span class="badge badge-orange">Sliding Scale</span></td>
+            <td>30% at &lt;50% LR, 20% at &gt;65% LR</td>
+            <td>03/01/2026</td>
+            <td><span class="badge badge-green">Active</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">Volume Bonus  - New Business</td>
+            <td><span class="badge badge-blue">Volume</span></td>
+            <td>+2% override at 200+ bound policies/quarter</td>
+            <td>04/01/2026</td>
+            <td><span class="badge badge-green">Active</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">MGA Profit-Sharing Agreement</td>
+            <td><span class="badge badge-red">Profit-Sharing</span></td>
+            <td>25% of underwriting profit above 70% combined ratio</td>
+            <td>01/01/2026</td>
+            <td><span class="badge badge-green">Active</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="cell-link">Legacy Flat Plan  - Homeowners</td>
+            <td><span class="badge badge-gray">Flat</span></td>
+            <td>12% of gross written premium</td>
+            <td>01/01/2024</td>
+            <td><span class="badge badge-gray">Retired</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Multi-Level Hierarchy -->
+    <div class="table-wrap" style="margin-bottom:24px; padding:16px;">
+      <div class="table-head-row" style="padding:0 0 12px;">
+        <div class="table-head-title">Multi-Level Hierarchy  - Commission Splits</div>
+      </div>
+      <div class="v-tree" id="commission-tree">
+        <div class="v-tree-node open" onclick="toggleTree(this, event)">
+          <div class="v-tree-row">
+            <span class="v-tree-toggle">▶</span>
+            <strong>Southlake Insurance Co. (Carrier)</strong>
+            <span class="v-tree-badge">Carrier</span>
+            <span class="v-tree-amount">100% pool</span>
+          </div>
+          <div class="v-tree-children">
+            <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Retains base risk margin; distributes remaining commission pool downstream to appointed MGAs.</div>
+
+            <div class="v-tree-node open" onclick="toggleTree(this, event)">
+              <div class="v-tree-row">
+                <span class="v-tree-toggle">▶</span>
+                <strong>Meridian MGA Partners</strong>
+                <span class="v-tree-badge">MGA</span>
+                <span class="v-tree-amount">22% split</span>
+              </div>
+              <div class="v-tree-children">
+                <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Receives 22% of gross written premium; passes 15&ndash;18% through to appointed retail agents.</div>
+
+                <div class="v-tree-node" onclick="toggleTree(this, event)">
+                  <div class="v-tree-row">
+                    <span class="v-tree-toggle">▶</span>
+                    <strong>Agent  - J. Alvarez Insurance Group</strong>
+                    <span class="v-tree-badge">Agent</span>
+                    <span class="v-tree-amount">17% split</span>
+                  </div>
+                  <div class="v-tree-children">
+                    <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Top-producing appointed agent; commercial auto &amp; homeowners book.</div>
+                  </div>
+                </div>
+
+                <div class="v-tree-node" onclick="toggleTree(this, event)">
+                  <div class="v-tree-row">
+                    <span class="v-tree-toggle">▶</span>
+                    <strong>Agent  - Coastal Risk Advisors</strong>
+                    <span class="v-tree-badge">Agent</span>
+                    <span class="v-tree-amount">15% split</span>
+                  </div>
+                  <div class="v-tree-children">
+                    <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Sliding-scale eligible; loss-ratio-linked commercial auto book.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="v-tree-node" onclick="toggleTree(this, event)">
+              <div class="v-tree-row">
+                <span class="v-tree-toggle">▶</span>
+                <strong>Highland Underwriting MGA</strong>
+                <span class="v-tree-badge">MGA</span>
+                <span class="v-tree-amount">18% split</span>
+              </div>
+              <div class="v-tree-children">
+                <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Program administrator for specialty lines; passes 14% through to appointed agents.</div>
+
+                <div class="v-tree-node" onclick="toggleTree(this, event)">
+                  <div class="v-tree-row">
+                    <span class="v-tree-toggle">▶</span>
+                    <strong>Agent  - Pinecrest Insurance Services</strong>
+                    <span class="v-tree-badge">Agent</span>
+                    <span class="v-tree-amount">14% split</span>
+                  </div>
+                  <div class="v-tree-children">
+                    <div style="font-size:11.5px;color:var(--gray-500);padding:2px 0 8px;line-height:1.55;">Specialty lines producer, appointed under Highland Underwriting MGA.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commission Transactions -->
+    <div class="table-wrap" style="margin-bottom:24px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Commission Transactions</div>
+        <div class="table-head-actions">
+          <input type="text" class="filter-input" placeholder="Search producer, policy..." id="ct-search" data-filter-input="ct-table" style="width:220px;">
+        </div>
+      </div>
+      <table class="data-table" id="ct-table" data-table-init>
+        <thead>
+          <tr>
+            <th><input type="checkbox" class="table-check"></th>
+            <th>Producer</th><th>Policy / Invoice Ref</th><th class="text-right">Gross Commission</th>
+            <th class="text-right">Clawback Adj.</th><th class="text-right">Net Payable</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamic transaction rows will be rendered here from subledger -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Commission Statements -->
+    <div class="table-wrap" style="margin-bottom:24px;">
+      <div class="table-head-row">
+        <div class="table-head-title">Commission Statements</div>
+      </div>
+      <table class="data-table" id="statements-table">
+        <thead><tr><th>Producer</th><th>Period</th><th class="text-right">Total</th><th>Actions</th></tr></thead>
+        <tbody id="statements-tbody">
+          <!-- Dynamic statement rows will be rendered here from subledger -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Dispute Workflow -->
+    <div class="table-wrap" style="padding:16px;">
+      <div class="table-head-row" style="padding:0 0 12px;">
+        <div class="table-head-title">Dispute Workflow</div>
+      </div>
+      <div id="dispute-list" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align: center; color: var(--gray-400); padding: 24px 0; font-size: 13px;">No pending disputes</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    initLayout('commission');
+    renderImportResultBanner('commission-schedule');
+    renderCommissionFromSubledger();
+
+    function renderCommissionFromSubledger() {
+      const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
+      const bType = active ? active.businessType : 'mga';
+      const policiesKey = bType + '_pas_policies';
+      const policies = JSON.parse(localStorage.getItem(policiesKey) || '[]');
+
+      let additionalCommission = 0;
+      const ctTbody = document.querySelector('#ct-table tbody');
+      
+      policies.forEach(p => {
+        const prem = parseFloat(p.premium) || 0;
+        const pct = parseFloat(p.commissionPct) || 15;
+        const comm = prem * (pct / 100);
+        additionalCommission += comm;
+
+        if (ctTbody) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="checkbox" class="table-check"></td>
+            <td class="font-semibold">${p.brokerName || 'Links Insurance Agency'}</td>
+            <td class="cell-link">${p.number}</td>
+            <td class="text-right">$${comm.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+            <td class="text-right"> -</td>
+            <td class="text-right font-semibold">$${comm.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+            <td><span class="badge ${p.status === 'BOUND' ? 'badge-green' : 'badge-gray'}">${p.status === 'BOUND' ? 'Approved' : 'Pending'}</span></td>
+          `;
+          ctTbody.insertBefore(tr, ctTbody.firstChild);
+        }
+      });
+
+      // Update stats cards
+      const baseEarned = 0;
+      const basePayable = 0;
+      
+      const earnedValEl = document.querySelector('.stats-row .stat-card:nth-child(2) .stat-value');
+      const payableValEl = document.querySelector('.stats-row .stat-card:first-child .stat-value');
+      const plansValEl = document.querySelector('.stats-row .stat-card:nth-child(3) .stat-value');
+      const disputesValEl = document.querySelector('.stats-row .stat-card:nth-child(4) .stat-value');
+      
+      if (earnedValEl) {
+        earnedValEl.textContent = '$' + (baseEarned + additionalCommission).toLocaleString('en-US', {maximumFractionDigits: 0});
+      }
+      if (payableValEl) {
+        payableValEl.textContent = '$' + (basePayable + additionalCommission).toLocaleString('en-US', {maximumFractionDigits: 0});
+      }
+      if (plansValEl) {
+        const planRowsCount = document.querySelectorAll('#cs-table tbody tr').length;
+        plansValEl.textContent = planRowsCount;
+      }
+      if (disputesValEl) {
+        const disputesCount = document.querySelectorAll('#dispute-list .v-config-row').length;
+        disputesValEl.textContent = disputesCount;
+      }
+
+      // Group by brokerName and add to statements
+      if (policies.length > 0) {
+        const brokerCommissions = {};
+        policies.forEach(p => {
+          const broker = p.brokerName || 'Links Insurance Agency';
+          const prem = parseFloat(p.premium) || 0;
+          const pct = parseFloat(p.commissionPct) || 15;
+          const comm = prem * (pct / 100);
+          brokerCommissions[broker] = (brokerCommissions[broker] || 0) + comm;
+        });
+
+        const statementTbody = document.getElementById('statements-tbody');
+        if (statementTbody) {
+          for (const [broker, totalComm] of Object.entries(brokerCommissions)) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="font-semibold">${broker}</td>
+              <td>Aug 2026</td>
+              <td class="text-right font-semibold">$${totalComm.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="generateStatement(this,'${broker}')">Generate</button>
+                <button class="btn btn-ghost btn-sm" disabled onclick="sendStatement(this,'${broker}')">Send</button>
+              </td>
+            `;
+            statementTbody.insertBefore(tr, statementTbody.firstChild);
+          }
+        }
+      }
+      
+      if (typeof initTableSelection === 'function') {
+        initTableSelection('ct-table');
+      }
+    }
+
+    function exportLedger(btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Exporting…';
+      showToast('Exporting commission ledger...', 'info');
+      setTimeout(() => {
+        btn.textContent = 'Exported ✓';
+        showToast('Commission ledger exported', 'success');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.disabled = false;
+        }, 2000);
+      }, 900);
+    }
+
+    /* ---------- New Commission Plan: entered by the user, no auto-generated rates ---------- */
+    const TYPE_BADGE_CLASS = { Flat: 'badge-gray', Tiered: 'badge-navy', 'Sliding Scale': 'badge-orange', Volume: 'badge-blue', 'Profit-Sharing': 'badge-red' };
+    const TIER_CONDITION_PLACEHOLDER = {
+      Flat: null,
+      Tiered: 'e.g. up to $500K',
+      'Sliding Scale': 'e.g. at <50% LR',
+      Volume: 'e.g. 200+ bound policies/quarter',
+      'Profit-Sharing': 'e.g. above 70% combined ratio',
+    };
+
+    function toggleNewPlanForm() {
+      const wrap = document.getElementById('new-plan-form-wrap');
+      const opening = wrap.style.display === 'none';
+      wrap.style.display = opening ? '' : 'none';
+      if (opening) renderTierRows();
+    }
+
+    function renderTierRows() {
+      const type = document.getElementById('np-type').value;
+      const container = document.getElementById('np-tier-rows');
+      container.innerHTML = '';
+      container.dataset.type = type;
+      addTierRow();
+    }
+
+    function addTierRow() {
+      const type = document.getElementById('np-type').value;
+      const container = document.getElementById('np-tier-rows');
+      const placeholder = TIER_CONDITION_PLACEHOLDER[type];
+      const row = document.createElement('div');
+      row.className = 'np-tier-row';
+      row.style.display = 'flex';
+      row.style.gap = '8px';
+      row.style.marginTop = '6px';
+      row.innerHTML = `
+        <input class="field-input" type="number" step="0.01" placeholder="Rate %" data-np-rate style="max-width:110px;">
+        ${placeholder ? `<input class="field-input" placeholder="${placeholder}" data-np-condition>` : '<input type="hidden" data-np-condition value="">'}
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.np-tier-row').remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function submitNewPlan() {
+      const name = document.getElementById('np-name').value.trim();
+      const type = document.getElementById('np-type').value;
+      const date = document.getElementById('np-date').value || today();
+      const rows = [...document.querySelectorAll('#np-tier-rows .np-tier-row')];
+      if (!name) { showToast('Enter a plan name', 'warning'); return; }
+      const parts = [];
+      for (const row of rows) {
+        const rate = row.querySelector('[data-np-rate]').value;
+        const condition = row.querySelector('[data-np-condition]').value.trim();
+        if (rate === '' || isNaN(parseFloat(rate))) continue;
+        parts.push(`${parseFloat(rate)}%${condition ? ' ' + condition : ''}`);
+      }
+      if (!parts.length) { showToast('Enter at least one rate', 'warning'); return; }
+      const summary = parts.join(', ');
+
+      const tbody = document.querySelector('#cs-table tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" class="table-check"></td>
+        <td class="cell-link">${name}</td>
+        <td><span class="badge ${TYPE_BADGE_CLASS[type] || 'badge-gray'}">${type}</span></td>
+        <td>${summary}</td>
+        <td>${date}</td>
+        <td><span class="badge badge-green">Active</span></td>
+      `;
+      tbody.insertBefore(tr, tbody.firstChild);
+      initTableSelection('cs-table');
+      toggleNewPlanForm();
+      document.getElementById('np-name').value = '';
+      showToast(`Commission plan "${name}" saved with the rates you entered`, 'success');
+    }
+
+    function generateStatement(btn, producerName) {
+      const row = btn.closest('tr');
+      const sendBtn = row ? row.querySelector('.btn-ghost') : null;
+      btn.disabled = true;
+      btn.textContent = 'Generated ✓';
+      if (sendBtn) sendBtn.disabled = false;
+      showToast('Statement generated for ' + producerName, 'success');
+    }
+
+    function sendStatement(btn, producerName) {
+      btn.disabled = true;
+      btn.textContent = 'Sent ✓';
+      showToast('Statement sent to ' + producerName, 'info');
+    }
+
+    function resolveDispute(rowId, decision) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+      const badgeCell = row.children[2];
+      const badgeClass = decision === 'Approved' ? 'badge-green' : 'badge-red';
+      badgeCell.innerHTML = '<span class="badge ' + badgeClass + '">' + decision + '</span>';
+      row.style.opacity = '0.6';
+      showToast('Dispute ' + decision.toLowerCase(), decision === 'Approved' ? 'success' : 'warning');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #1A1D23;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporting & Analytics — Insights | VeriDex</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/components.js"></script>
+  <script src="js/config-engine.js"></script>
+  <script src="js/layout.js"></script>
+  <style>
+    /* ── Report Library grid (page-scoped; no equivalent utility exists in styles.css) ── */
+    .rl-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      padding: 20px;
+    }
+    @media (max-width: 1200px) { .rl-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px)  { .rl-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { .rl-grid { grid-template-columns: 1fr; } }
+
+    .rl-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 15px 16px;
+      cursor: pointer;
+      transition: box-shadow .15s, border-color .15s, transform .15s;
+    }
+    .rl-card:hover { box-shadow: var(--shadow); border-color: var(--v-teal); transform: translateY(-1px); }
+    .rl-card.active { border-color: var(--v-teal); background: var(--v-teal-bg); }
+    .rl-card-name { font-size: 13px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+    .rl-card-desc { font-size: 11.5px; color: var(--gray-500); line-height: 1.4; }
+
+    /* ── Report Builder two-column layout ── */
+    .rb-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 20px;
+    }
+    @media (max-width: 900px) { .rb-layout { grid-template-columns: 1fr; } }
+
+    .rb-col-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--gray-500);
+      margin-bottom: 10px;
+    }
+
+    .rb-field-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 60px;
+    }
+
+    .rb-field-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: var(--gray-700);
+    }
+
+    .rb-field-item.added { opacity: 0.45; }
+
+    .rb-add-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: none;
+      background: var(--navy);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .rb-add-btn:hover:not(:disabled) { background: var(--navy-hover); }
+    .rb-add-btn:disabled { background: var(--gray-300); cursor: not-allowed; }
+
+    .rb-selected-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: var(--v-teal-bg);
+      border: 1px solid var(--v-teal);
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: var(--v-ink);
+      font-weight: 600;
+    }
+
+    .rb-remove-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--gray-500);
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .rb-remove-btn:hover { background: var(--red-bg); color: var(--red); }
+
+    .rb-empty-hint {
+      font-size: 12px;
+      color: var(--gray-400);
+      padding: 10px 0;
+      text-align: center;
+      border: 1px dashed var(--gray-300);
+      border-radius: 6px;
+    }
+
+    .rb-config-row {
+      display: flex;
+      gap: 14px;
+      padding: 0 20px 16px;
+      flex-wrap: wrap;
+    }
+    .rb-config-field { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+
+    .rb-actions-row {
+      display: flex;
+      gap: 10px;
+      padding: 0 20px 20px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Dashboard Builder ── */
+    .db-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      padding: 20px;
+    }
+    @media (max-width: 900px) { .db-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .db-tile {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      position: relative;
+      border-top: 3px solid var(--v-teal);
+    }
+    .db-tile.new { border-top-color: var(--coral); }
+    .db-tile-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: none;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .db-tile-remove:hover { background: var(--red-bg); color: var(--red); }
+    .db-tile-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); margin-bottom: 6px; }
+    .db-tile-value { font-size: 20px; font-weight: 800; color: var(--gray-900); }
+    .db-tile-sub { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+
+    .db-add-tile {
+      background: var(--gray-50);
+      border: 2px dashed var(--gray-300);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-500);
+      cursor: pointer;
+      min-height: 84px;
+      transition: all .15s;
+    }
+    .db-add-tile:hover { border-color: var(--navy); color: var(--navy); background: white; }
+
+    .rap-note {
+      font-size: 11px;
+      color: var(--gray-400);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+<main class="main-content" id="main-content">
+
+  <!-- ═══ PAGE HEADER ═══ -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Reporting &amp; Analytics</div>
+      <div class="page-subtitle">Report Library · Custom Report Builder · Dashboard Builder</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-outline btn-sm" onclick="showToast('Opening scheduled deliveries…')">Scheduled Deliveries</button>
+      <button class="btn btn-primary btn-sm" onclick="showToast('Opening new custom report…')">+ New Custom Report</button>
+    </div>
+  </div>
+
+  <!-- ═══ STAT CARDS ═══ -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon si-navy">📊</div>
+      <div class="stat-info">
+        <div class="stat-value">184</div>
+        <div class="stat-label">Reports Run This Month</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-coral">📅</div>
+      <div class="stat-info">
+        <div class="stat-value">12</div>
+        <div class="stat-label">Scheduled Deliveries</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-green">💾</div>
+      <div class="stat-info">
+        <div class="stat-value">27</div>
+        <div class="stat-label">Saved Custom Reports</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-orange">📁</div>
+      <div class="stat-info">
+        <div class="stat-value">Excel, CSV, PDF</div>
+        <div class="stat-label">Export Formats Supported</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPORT LIBRARY ═══ -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <div class="card-title">Report Library</div>
+      <div class="rap-note">Click any report to preview sample output</div>
+    </div>
+    <div class="rl-grid" id="reportGrid"></div>
+  </div>
+
+  <!-- ═══ REPORT PREVIEW PANEL ═══ -->
+  <div class="table-wrap" id="reportPreviewPanel" style="display:none; margin-bottom:20px;">
+    <div class="table-head-row">
+      <div class="table-head-title" id="reportPreviewTitle">Report Preview</div>
+      <div class="table-head-actions">
+        <button class="btn btn-outline btn-sm" onclick="showToast('Exporting preview to Excel…')">⬇ Export</button>
+        <button class="btn btn-ghost btn-sm" onclick="closePreview()">✕ Close</button>
+      </div>
+    </div>
+    <table class="data-table" id="reportPreviewTable">
+      <thead><tr id="reportPreviewHead"></tr></thead>
+      <tbody id="reportPreviewBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ═══ CUSTOM REPORT BUILDER ═══ -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <div class="card-title">Custom Report Builder</div>
+      <div class="rap-note">Click + to add a field to your report</div>
+    </div>
+    <div class="rb-layout">
+      <div>
+        <div class="rb-col-title">Available Fields &amp; Dimensions</div>
+        <div class="rb-field-list" id="rbAvailableList"></div>
+      </div>
+      <div>
+        <div class="rb-col-title">Selected Columns</div>
+        <div class="rb-field-list" id="rbSelectedList">
+          <div class="rb-empty-hint" id="rbEmptyHint">No columns selected yet - add fields from the left</div>
+        </div>
+      </div>
+    </div>
+    <div class="rb-config-row">
+      <div class="rb-config-field">
+        <label class="field-label">Filter By</label>
+        <select class="field-input field-select" id="rbFilterSelect"></select>
+      </div>
+      <div class="rb-config-field">
+        <label class="field-label">Group By</label>
+        <select class="field-input field-select" id="rbGroupBySelect"></select>
+      </div>
+    </div>
+    <div class="rb-actions-row">
+      <button class="btn btn-primary" onclick="runReport()">Run Report</button>
+      <button class="btn btn-outline" onclick="saveAsTemplate()">Save as Template</button>
+      <button class="btn btn-outline" onclick="scheduleDelivery()">Schedule Delivery</button>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD BUILDER ═══ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Dashboard Builder</div>
+      <div class="rap-note">Click a tile's ✕ to remove it</div>
+    </div>
+    <div class="db-grid" id="dashboardGrid"></div>
+  </div>
+
+</main>
+
+<script src="js/app.js"></script>
+<script>
+  /* ══════════════════════════════════════════════════
+     REPORT LIBRARY
+  ══════════════════════════════════════════════════ */
+  const REPORT_LIST = [
+    { name: 'Trial Balance',             desc: 'Debit/credit balances across all GL accounts' },
+    { name: 'GL Detail',                 desc: 'Full transaction-level general ledger detail' },
+    { name: 'AR Aging',                  desc: 'Receivables aged into 30/60/90/120-day buckets' },
+    { name: 'AP Aging',                  desc: 'Payables aged into 30/60/90/120-day buckets' },
+    { name: 'Bank Reconciliation Report', desc: 'Book vs. bank balance reconciliation summary' },
+    { name: 'Cash Flow Statement',       desc: 'Operating, investing and financing cash movement' },
+    { name: 'P&L',                       desc: 'Revenue, expenses and net income by period' },
+    { name: 'Balance Sheet',             desc: 'Assets, liabilities and equity as of period end' },
+    { name: 'Budget vs Actual',          desc: 'Budgeted vs. actual spend with variance %' },
+    { name: 'Expense Report',            desc: 'Categorized operating expense breakdown' },
+    { name: 'Commission Report',         desc: 'Commission earned by agent, tier and period' },
+    { name: 'Loss Ratio Report',         desc: 'Incurred losses as a % of earned premium' },
+    { name: 'Combined Ratio Report',     desc: 'Loss ratio plus expense ratio by line of business' },
+    { name: 'Reinsurance Summary',       desc: 'Ceded premium, losses and recoverables by treaty' },
+    { name: 'Premium Register',         desc: 'Written and earned premium by policy and LOB' },
+    { name: '1099 Summary',              desc: 'Vendor payments subject to 1099 reporting' },
+    { name: 'Tax Liability Report',      desc: 'Sales, use and premium tax liability by jurisdiction' },
+    { name: 'Fixed Asset Schedule',      desc: 'Asset register with depreciation and net book value' },
+    { name: 'Inventory Valuation',       desc: 'On-hand inventory valued at cost by location' },
+    { name: 'Project P&L',               desc: 'Revenue and cost by project/job with margin' },
+  ];
+
+  const REPORT_PREVIEWS = {
+    'Trial Balance': {
+      cols: ['Account', 'Account Name', 'Debit', 'Credit'],
+      rows: [
+        ['1000', 'Cash & Bank', '$1,248,330', ' - '],
+        ['1200', 'Accounts Receivable', '$412,880', ' - '],
+        ['2000', 'Accounts Payable', ' - ', '$340,112'],
+        ['3000', 'Retained Earnings', ' - ', '$892,410'],
+        ['4000', 'Revenue', ' - ', '$2,110,900'],
+        ['5000', 'Operating Expenses', '$1,681,212', ' - '],
+      ],
+    },
+    'AR Aging': {
+      cols: ['Customer', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days'],
+      rows: [
+        ['Meridian Logistics',  '$18,400', '$4,200', ' - ', ' - ', ' - '],
+        ['Harbor Point Retail', '$9,100',  '$2,850', '$1,200', ' - ', ' - '],
+        ['Blue Ridge Foods',    '$27,650', ' - ',      '$3,400', ' - ', ' - '],
+        ['Falcon Construction', '$5,200',  '$1,100', ' - ', '$2,900', '$780'],
+      ],
+    },
+    'AP Aging': {
+      cols: ['Vendor', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days'],
+      rows: [
+        ['Summit Office Supply', '$6,300', ' - ', ' - ', ' - ', ' - '],
+        ['Precision Freight Co.', '$14,900', '$2,100', ' - ', ' - ', ' - '],
+        ['Anchor Utilities',      '$3,450', '$3,450', '$1,010', ' - ', ' - '],
+        ['Vertex IT Services',    '$8,200', ' - ', '$960', '$400', ' - '],
+      ],
+    },
+    'P&L': {
+      cols: ['Line Item', 'Current Period', 'Prior Period', 'Variance'],
+      rows: [
+        ['Total Revenue',        '$2,110,900', '$1,948,300', '+8.3%'],
+        ['Cost of Goods Sold',   '$812,440',   '$766,120',   '+6.0%'],
+        ['Gross Profit',         '$1,298,460', '$1,182,180', '+9.8%'],
+        ['Operating Expenses',   '$868,772',   '$841,050',   '+3.3%'],
+        ['Net Income',           '$429,688',   '$341,130',   '+26.0%'],
+      ],
+    },
+    'Commission Report': {
+      cols: ['Agent', 'Tier', 'Written Premium', 'Rate', 'Commission Earned'],
+      rows: [
+        ['J. Alvarez',   'Gold',    '$412,000', '12%', '$49,440'],
+        ['R. Chen',      'Silver',  '$268,500', '9%',  '$24,165'],
+        ['M. Okafor',    'Gold',    '$531,200', '12%', '$63,744'],
+        ['T. Nguyen',    'Bronze',  '$140,750', '6%',  '$8,445'],
+      ],
+    },
+  };
+
+  function genericPreview(name) {
+    return {
+      cols: ['Field A', 'Field B', 'Field C', 'Field D'],
+      rows: [
+        ['Sample preview', ' - ', ' - ', ' - '],
+        ['Sample preview', ' - ', ' - ', ' - '],
+        ['Sample preview', ' - ', ' - ', ' - '],
+      ],
+    };
+  }
+
+  function renderReportGrid() {
+    document.getElementById('reportGrid').innerHTML = REPORT_LIST.map(r => `
+      <div class="rl-card" id="rl-card-${slug(r.name)}" onclick="previewReport('${r.name}')">
+        <div class="rl-card-name">${r.name}</div>
+        <div class="rl-card-desc">${r.desc}</div>
+      </div>
+    `).join('');
+  }
+
+  function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+
+  function previewReport(name) {
+    document.querySelectorAll('.rl-card').forEach(el => el.classList.remove('active'));
+    const card = document.getElementById('rl-card-' + slug(name));
+    if (card) card.classList.add('active');
+
+    const data = REPORT_PREVIEWS[name] || genericPreview(name);
+    const isGeneric = !REPORT_PREVIEWS[name];
+
+    document.getElementById('reportPreviewTitle').textContent = name + ' - Preview' + (isGeneric ? ' (Sample preview)' : '');
+    document.getElementById('reportPreviewHead').innerHTML = data.cols.map(c => `<th>${c}</th>`).join('');
+    document.getElementById('reportPreviewBody').innerHTML = data.rows.map(row =>
+      '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>'
+    ).join('');
+
+    const panel = document.getElementById('reportPreviewPanel');
+    panel.style.display = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closePreview() {
+    document.getElementById('reportPreviewPanel').style.display = 'none';
+    document.querySelectorAll('.rl-card').forEach(el => el.classList.remove('active'));
+  }
+
+  /* ══════════════════════════════════════════════════
+     CUSTOM REPORT BUILDER
+     Note: config-engine.js already defines a global DIMENSION_LIBRARY
+     for entity-configuration dimensions (Class, Location, MGA, etc).
+     Re-using that const name here would collide with the loaded
+     script, so this page defines its own report-builder field set
+     under a distinct name, REPORT_DIMENSIONS, scoped to this page.
+  ══════════════════════════════════════════════════ */
+  const REPORT_DIMENSIONS = [
+    'Account', 'Department', 'Cost Center', 'Currency', 'Line of Business',
+    'Vendor', 'Customer', 'Period', 'Region',
+  ];
+
+  let selectedColumns = [];
+
+  function renderAvailableFields() {
+    document.getElementById('rbAvailableList').innerHTML = REPORT_DIMENSIONS.map(dim => {
+      const added = selectedColumns.includes(dim);
+      return `
+        <div class="rb-field-item ${added ? 'added' : ''}" id="rb-avail-${slug(dim)}">
+          <span>${dim}</span>
+          <button class="rb-add-btn" ${added ? 'disabled' : ''} onclick="addDimension('${dim}')">+</button>
+        </div>`;
+    }).join('');
+  }
+
+  function renderSelectedColumns() {
+    const list = document.getElementById('rbSelectedList');
+    if (!selectedColumns.length) {
+      list.innerHTML = '<div class="rb-empty-hint" id="rbEmptyHint">No columns selected yet - add fields from the left</div>';
+      return;
+    }
+    list.innerHTML = selectedColumns.map(dim => `
+      <div class="rb-selected-item">
+        <span>${dim}</span>
+        <button class="rb-remove-btn" onclick="removeDimension('${dim}')">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addDimension(dim) {
+    if (selectedColumns.includes(dim)) return;
+    selectedColumns.push(dim);
+    renderAvailableFields();
+    renderSelectedColumns();
+  }
+
+  function removeDimension(dim) {
+    selectedColumns = selectedColumns.filter(d => d !== dim);
+    renderAvailableFields();
+    renderSelectedColumns();
+  }
+
+  function populateBuilderSelects() {
+    const opts = '<option value="">None</option>' + REPORT_DIMENSIONS.map(d => `<option>${d}</option>`).join('');
+    document.getElementById('rbFilterSelect').innerHTML = opts;
+    document.getElementById('rbGroupBySelect').innerHTML = opts;
+  }
+
+  function columnSummary() {
+    return selectedColumns.length ? selectedColumns.join(', ') : '(no columns selected)';
+  }
+
+  function runReport() { showToast('Report run with columns: ' + columnSummary(), 'success'); }
+  function saveAsTemplate() { showToast('Template saved with columns: ' + columnSummary(), 'success'); }
+  function scheduleDelivery() { showToast('Delivery scheduled with columns: ' + columnSummary(), 'info'); }
+
+  /* ══════════════════════════════════════════════════
+     DASHBOARD BUILDER
+  ══════════════════════════════════════════════════ */
+  const KPI_TILES = [
+    { label: 'Net Revenue (MTD)', value: '$1.24M', sub: 'vs. $1.09M prior month' },
+    { label: 'Cash Position',     value: '$3.8M',  sub: 'Across 5 operating banks' },
+    { label: 'AR Outstanding',    value: '$412K',  sub: '18 open invoices' },
+    { label: 'Loss Ratio',       value: '61.2%',  sub: 'YTD, all lines' },
+  ];
+
+  let widgetCounter = 0;
+
+  function renderDashboard() {
+    const grid = document.getElementById('dashboardGrid');
+    grid.innerHTML = KPI_TILES.map((t, i) => `
+      <div class="db-tile" id="db-tile-${i}">
+        <div class="db-tile-label">${t.label}</div>
+        <div class="db-tile-value">${t.value}</div>
+        <div class="db-tile-sub">${t.sub}</div>
+      </div>
+    `).join('') + '<div class="db-add-tile" onclick="addWidget()">+ Add Widget</div>';
+  }
+
+  function addWidget() {
+    widgetCounter++;
+    const id = 'db-widget-' + widgetCounter;
+    const addTile = document.querySelector('.db-add-tile');
+    const tile = document.createElement('div');
+    tile.className = 'db-tile new';
+    tile.id = id;
+    tile.innerHTML = `
+      <button class="db-tile-remove" onclick="document.getElementById('${id}').remove()">✕</button>
+      <div class="db-tile-label">New KPI Widget ${widgetCounter}</div>
+      <div class="db-tile-value"> - </div>
+      <div class="db-tile-sub">Configure this widget's metric</div>
+    `;
+    addTile.parentNode.insertBefore(tile, addTile);
+    showToast('Widget added - configure its metric to activate', 'info');
+  }
+
+  /* ══════════════════════════════════════════════════
+     INIT
+  ══════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderReportGrid();
+    renderAvailableFields();
+    renderSelectedColumns();
+    populateBuilderSelects();
+    renderDashboard();
+  });
+</script>
+<script>
+  initLayout('reporting');
+</script>
+</body>
+</html>
