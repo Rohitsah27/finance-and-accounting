@@ -335,7 +335,34 @@ function buildEntitySwitcher() {
   const groups = { insurance: 'Insurance Operations', general: 'General Business' };
   let menu = '';
   ['insurance', 'general'].forEach(g => {
-    let ents = (cfg.secondaryEntities || []).filter(e => typeof getBusinessType === 'function' && getBusinessType(e.businessType).group === g);
+    let ents = (cfg.secondaryEntities || []).filter(e => {
+      if (typeof getBusinessType !== 'function') return false;
+      if (getBusinessType(e.businessType).group !== g) return false;
+      
+      let isOnboarded = false;
+      let actualName = e.name;
+      
+      if (e.id === active.id || e.id === 'ENT-MINE') {
+        isOnboarded = true;
+        if (e.id === 'ENT-MINE') actualName = cfg.companyName;
+      }
+      
+      const pfx = e.businessType === 'agency' ? 'broker_' : (e.businessType + '_');
+      const raw = localStorage.getItem(pfx + 'v_tenant_config');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.onboarded) {
+            isOnboarded = true;
+            if (parsed.companyName) actualName = parsed.companyName;
+          }
+        } catch (ex) {}
+      }
+      
+      e.displayName = actualName;
+      return isOnboarded;
+    });
+
     if (!ents.length) return;
     menu += `<div class="v-entity-menu-group-label">${groups[g]}</div>`;
     ents.forEach(e => {
@@ -343,7 +370,7 @@ function buildEntitySwitcher() {
       menu += `<div class="v-entity-menu-item ${e.id === active.id ? 'active' : ''}" onclick="switchActiveEntity('${e.id}')">
         <div class="v-entity-avatar">${ebt.icon}</div>
         <div>
-          <div style="font-size:12px;font-weight:600;color:var(--color-ink);">${e.name}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--color-ink);">${e.displayName || e.name}</div>
           <div style="font-size:11px;color:var(--color-muted);">${ebt.label}</div>
         </div>
       </div>`;
