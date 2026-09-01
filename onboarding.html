@@ -350,17 +350,21 @@
         const descInput = document.getElementById('ob-business-label');
         
         if (cfg.businessType === 'carrier') {
-          nameInput.value = 'Rohit';
-          companyInput.value = "Rohit's Carrier";
+          nameInput.value = 'SOUTHLAKE';
+          companyInput.value = "SOUTHLAKE";
           descInput.value = "Risk Carrier";
         } else if (cfg.businessType === 'mga') {
-          nameInput.value = 'Ankit';
-          companyInput.value = "Ankit's MGA";
+          nameInput.value = 'NTA';
+          companyInput.value = "NTA";
           descInput.value = "MGA Operators";
         } else if (cfg.businessType === 'agency' || cfg.businessType === 'broker') {
-          nameInput.value = 'Akhilesh';
-          companyInput.value = "Akhilesh's Agency";
+          nameInput.value = 'HIT';
+          companyInput.value = "HIT";
           descInput.value = "Agency Operators";
+        } else if (cfg.businessType === 'insured') {
+          nameInput.value = 'Ayushi';
+          companyInput.value = "Ayushi";
+          descInput.value = "Insured Org";
         }
       }
     } catch (ex) {}

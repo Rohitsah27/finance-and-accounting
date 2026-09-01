@@ -217,9 +217,10 @@
           businessType: bType,
           secondaryEntities: [
             { id: 'ENT-MINE',   name: 'My Business',             businessType: bType },
-            { id: 'ENT-AGY-01', name: 'Links Insurance Agency', businessType: 'agency' },
-            { id: 'ENT-CAR-01', name: 'Southlake Insurance Co.', businessType: 'carrier' },
-            { id: 'ENT-INS-01', name: 'Commercial Insured Corp', businessType: 'insured' }
+            { id: 'ENT-MGA-01', name: 'NTA', businessType: 'mga' },
+            { id: 'ENT-AGY-01', name: 'HIT', businessType: 'agency' },
+            { id: 'ENT-CAR-01', name: 'SOUTHLAKE', businessType: 'carrier' },
+            { id: 'ENT-INS-01', name: 'Ayushi', businessType: 'insured' }
           ].filter(e => e.id === 'ENT-MINE' || e.businessType !== bType),
           entityConfigs: {
             'ENT-MINE': {
