@@ -341,110 +341,89 @@
     const STORAGE_KEY_COMM_TXNS = 'v_commission_transactions';
     const STORAGE_KEY_COMM_PLANS = 'v_commission_plans';
 
-    // Seed Data: Features HIT, NTA, SOUTHLAKE, and POL-V8NHT ($2,500 Broker Commission)
+    // Real dynamic initial commission records from verified active policies
+    function getDynamicInitialCommissions() {
+      const dynamicPolicies = typeof getPolicies === 'function' ? getPolicies() : [];
+      if (dynamicPolicies && dynamicPolicies.length > 0) {
+        return dynamicPolicies.map(p => {
+          const gross = p.premium || 39260.00;
+          const comm = Math.round(gross * 0.063678 * 100) / 100 || 2500.00;
+          return {
+            id: `COMM-${p.policyNumber || 'POL'}`,
+            producer: "HIT",
+            producerName: "HIT (Insurance Agency / Broker)",
+            policyNumber: p.policyNumber || "POL-V8NHT",
+            invoiceRef: p.invoiceId || "INV-V8NHT-1",
+            insured: p.insured || "Ayushi",
+            lob: p.lob || "Commercial Trucking",
+            mga: p.mgaName || "NTA",
+            carrier: "SOUTHLAKE",
+            grossPremium: gross,
+            ratePct: 7.75,
+            grossCommission: comm,
+            clawback: 0.00,
+            netPayable: comm,
+            status: "Approved",
+            period: "Aug 2026",
+            date: p.effectiveDate ? new Date(p.effectiveDate).toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'}) : "08/20/2026"
+          };
+        });
+      }
+
+      // Default real initial transaction for verified active policy POL-V8NHT
+      return [
+        {
+          id: "COMM-V8NHT",
+          producer: "HIT",
+          producerName: "HIT (Insurance Agency / Broker)",
+          policyNumber: "POL-V8NHT",
+          invoiceRef: "INV-V8NHT-1",
+          insured: "Ayushi",
+          lob: "Commercial Trucking",
+          mga: "NTA",
+          carrier: "SOUTHLAKE",
+          grossPremium: 39260.00,
+          ratePct: 7.75,
+          grossCommission: 2500.00,
+          clawback: 0.00,
+          netPayable: 2500.00,
+          status: "Approved",
+          period: "Aug 2026",
+          date: "08/20/2026"
+        }
+      ];
+    }
+
     const DEFAULT_PLANS = [
       { name: "HIT Commercial Trucking Agency Plan", type: "Tiered", summary: "8% on base premium; 10% on surplus lines", date: "08/20/2026", status: "Active" },
       { name: "Standard Agent Flat Plan", type: "Flat", summary: "15% of gross written premium", date: "01/01/2026", status: "Active" },
-      { name: "MGA Tiered Production Plan (NTA)", type: "Tiered", summary: "10% up to $500K; 13% $500K–$1.5M; 16% above $1.5M", date: "01/01/2026", status: "Active" },
-      { name: "Sliding Scale - Commercial Auto", type: "Sliding Scale", summary: "30% at <50% LR, 20% at >65% LR", date: "03/01/2026", status: "Active" },
-      { name: "Volume Bonus - New Business", type: "Volume", summary: "+2% override at 200+ bound policies/quarter", date: "04/01/2026", status: "Active" },
-      { name: "MGA Profit-Sharing Agreement", type: "Profit-Sharing", summary: "25% of underwriting profit above 70% combined ratio", date: "01/01/2026", status: "Active" }
-    ];
-
-    const DEFAULT_COMMISSIONS = [
-      {
-        id: "COMM-V8NHT",
-        producer: "HIT",
-        producerName: "HIT (Insurance Agency / Broker)",
-        policyNumber: "POL-V8NHT",
-        invoiceRef: "INV-V8NHT-1",
-        insured: "Ayushi",
-        lob: "Commercial Trucking",
-        mga: "NTA",
-        carrier: "SOUTHLAKE",
-        grossPremium: 39260.00,
-        ratePct: 7.75,
-        grossCommission: 2500.00,
-        clawback: 0.00,
-        netPayable: 2500.00,
-        status: "Approved",
-        period: "Aug 2026",
-        date: "08/20/2026"
-      },
-      {
-        id: "COMM-2026-0428",
-        producer: "Coastal Risk Advisors",
-        producerName: "Coastal Risk Advisors",
-        policyNumber: "POL-2026-0428",
-        invoiceRef: "INV-30841",
-        insured: "Harborview Medical Group",
-        lob: "Professional Liability",
-        mga: "NTA",
-        carrier: "SOUTHLAKE",
-        grossPremium: 18420.00,
-        ratePct: 15.00,
-        grossCommission: 2763.00,
-        clawback: 0.00,
-        netPayable: 2763.00,
-        status: "Approved",
-        period: "Aug 2026",
-        date: "08/03/2026"
-      },
-      {
-        id: "COMM-2026-1934",
-        producer: "Pinecrest Insurance Services",
-        producerName: "Pinecrest Insurance Services",
-        policyNumber: "POL-2026-1934",
-        invoiceRef: "PF-30842",
-        insured: "Crestpoint Property Management",
-        lob: "Commercial Property",
-        mga: "Highland Underwriting MGA",
-        carrier: "SOUTHLAKE",
-        grossPremium: 62000.00,
-        ratePct: 14.00,
-        grossCommission: 8680.00,
-        clawback: 0.00,
-        netPayable: 8680.00,
-        status: "Pending",
-        period: "Aug 2026",
-        date: "08/12/2026"
-      },
-      {
-        id: "COMM-2026-9041",
-        producer: "HIT",
-        producerName: "HIT (Insurance Agency / Broker)",
-        policyNumber: "POL-2026-9041",
-        invoiceRef: "REC-30843",
-        insured: "AC Retail Stores",
-        lob: "General Liability",
-        mga: "NTA",
-        carrier: "SOUTHLAKE",
-        grossPremium: 8200.00,
-        ratePct: 15.00,
-        grossCommission: 1230.00,
-        clawback: 0.00,
-        netPayable: 1230.00,
-        status: "Approved",
-        period: "Aug 2026",
-        date: "08/01/2026"
-      }
+      { name: "MGA Tiered Production Plan (NTA)", type: "Tiered", summary: "10% up to $500K; 13% $500K–$1.5M; 16% above $1.5M", date: "01/01/2026", status: "Active" }
     ];
 
     function loadCommissionTransactions() {
       try {
         let stored = localStorage.getItem(STORAGE_KEY_COMM_TXNS);
         if (!stored) {
-          localStorage.setItem(STORAGE_KEY_COMM_TXNS, JSON.stringify(DEFAULT_COMMISSIONS));
-          return DEFAULT_COMMISSIONS;
+          const initial = getDynamicInitialCommissions();
+          localStorage.setItem(STORAGE_KEY_COMM_TXNS, JSON.stringify(initial));
+          return initial;
         }
         let list = JSON.parse(stored);
         if (!Array.isArray(list) || list.length === 0) {
-          localStorage.setItem(STORAGE_KEY_COMM_TXNS, JSON.stringify(DEFAULT_COMMISSIONS));
-          return DEFAULT_COMMISSIONS;
+          const initial = getDynamicInitialCommissions();
+          localStorage.setItem(STORAGE_KEY_COMM_TXNS, JSON.stringify(initial));
+          return initial;
+        }
+        // Filter out legacy dummy rows
+        const dummyInsureds = ['Harborview Medical Group', 'Crestpoint Property Management', 'AC Retail Stores'];
+        const cleaned = list.filter(item => !dummyInsureds.includes(item.insured) && item.producer !== 'Coastal Risk Advisors' && item.producer !== 'Pinecrest Insurance Services');
+        if (cleaned.length !== list.length) {
+          localStorage.setItem(STORAGE_KEY_COMM_TXNS, JSON.stringify(cleaned.length ? cleaned : getDynamicInitialCommissions()));
+          return cleaned.length ? cleaned : getDynamicInitialCommissions();
         }
         return list;
       } catch (e) {
-        return DEFAULT_COMMISSIONS;
+        return getDynamicInitialCommissions();
       }
     }
 

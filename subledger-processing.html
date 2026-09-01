@@ -223,70 +223,55 @@
       if (keys.indexOf(h) !== -1) switchSLTab(h);
     })();
 
-    /* ─── Period Data ─── */
-    const SL_PERIODS = {
-      itd: { label:'ITD (All Time)',         shortLabel:'ITD',       health:[{val:'$3.82Cr',sub:'GL Balance'},{val:'$2.26Cr',sub:'GL Balance'},{val:'$68.4L',sub:'GL Balance'},{val:'$1.82Cr',sub:'GL Balance'},{val:'$1.24Cr',sub:'GL Balance'},{val:'$2.18Cr',sub:'GL Balance'}] },
-      ytd: { label:'Year to Date (2026)',    shortLabel:'YTD 2026',  health:[{val:'$1.24Cr',sub:'GL Balance'},{val:'$73.8L',sub:'GL Balance'},{val:'$18.6L',sub:'GL Balance'},{val:'$48.2L',sub:'GL Balance'},{val:'$32.4L',sub:'GL Balance'},{val:'$62.4L',sub:'GL Balance'}] },
-      mtd: { label:'Month to Date (May-26)', shortLabel:'MTD May-26',health:[{val:'$18.4L',sub:'GL Balance'},{val:'$8.4L',sub:'GL Balance'},{val:'$2.1L',sub:'GL Balance'},{val:'$6.8L',sub:'GL Balance'},{val:'$4.2L',sub:'GL Balance'},{val:'$8.6L',sub:'GL Balance'}] },
-    };
-
+    /* ─── Health & Config Data ─── */
     const HEALTH_CONFIG = [
-      { label:'Premium',       color:'var(--green)',  status:'✓ Balanced', badge:'badge-green' },
-      { label:'Claims',        color:'var(--coral)',  status:'✓ Balanced', badge:'badge-green' },
-      { label:'Reinsurance',   color:'var(--navy)',   status:'⚠ 2 Breaks', badge:'badge-orange' },
-      { label:'AP',            color:'#fb8c00',       status:'✓ Balanced', badge:'badge-green' },
-      { label:'AR',            color:'#1565c0',       status:'✓ Balanced', badge:'badge-green' },
-      { label:'MGA Settlement',color:'#6a1b9a',       status:'✓ Balanced', badge:'badge-green' },
+      { key:'premium', label:'Premium',       color:'var(--green)',  status:'✓ Balanced', badge:'badge-green' },
+      { key:'claims',  label:'Claims',        color:'var(--coral)',  status:'✓ Balanced', badge:'badge-green' },
+      { key:'reins',   label:'Reinsurance',   color:'var(--navy)',   status:'✓ Balanced', badge:'badge-green' },
+      { key:'ap',      label:'AP',            color:'#fb8c00',       status:'✓ Balanced', badge:'badge-green' },
+      { key:'ar',      label:'AR',            color:'#1565c0',       status:'✓ Balanced', badge:'badge-green' },
+      { key:'mga',     label:'MGA Settlement',color:'#6a1b9a',       status:'✓ Balanced', badge:'badge-green' },
     ];
 
-    /* ─── Subledger Data ─── */
+    /* ─── Subledger Data Store ─── */
     const SL_DATA = {
       premium: {
         title: 'Premium Subledger',
-        headers: ['Policy No.','Transaction Type','Date','MGA','State','LOB','Debit ($)','Credit ($)','GL Account','Journal No.'],
-        rows: [
-          { policyNo:'POL-TX-2026-9102', txType:'New Business', date:'05/05/2026', mga:'Futuristic', state:'TX', lob:'Property', debit:58400, credit:0, gl:'1100', je:'JE-2026-0052', dateYM:'2026-05' },
-          { policyNo:'POL-NY-2026-9105', txType:'New Business', date:'12/05/2026', mga:'ACCL',       state:'NY', lob:'Liability',debit:42800, credit:0, gl:'1100', je:'JE-2026-0053', dateYM:'2026-05' },
-          { policyNo:'POL-TX-2024-8421', txType:'New Business', date:'15/01/2026', mga:'Futuristic', state:'TX', lob:'Auto',     debit:48200, credit:0, gl:'1100', je:'JE-2026-0048', dateYM:'2026-01' },
-          { policyNo:'POL-TX-2024-8418', txType:'Renewal',      date:'15/03/2026', mga:'NTA',        state:'TX', lob:'Property', debit:124800,credit:0, gl:'1100', je:'JE-2026-0041', dateYM:'2026-03' },
-          { policyNo:'POL-CA-2024-7284', txType:'Endorsement',  date:'10/04/2026', mga:'ACCL',       state:'CA', lob:'Liability',debit:0, credit:12400, gl:'4100', je:'JE-2026-0038', dateYM:'2026-04' },
-          { policyNo:'POL-FL-2025-6192', txType:'New Business', date:'01/04/2026', mga:'Futuristic', state:'FL', lob:'Property', debit:248200,credit:0, gl:'1100', je:'JE-2026-0036', dateYM:'2026-04' },
-          { policyNo:'POL-TX-2023-5001', txType:'Renewal',      date:'01/01/2024', mga:'Futuristic', state:'TX', lob:'Auto',     debit:38200, credit:0, gl:'1100', je:'JE-2024-0001', dateYM:'2024-01' },
-          { policyNo:'POL-CA-2023-4812', txType:'New Business', date:'15/06/2024', mga:'NTA',        state:'CA', lob:'Property', debit:92400, credit:0, gl:'1100', je:'JE-2024-0142', dateYM:'2024-06' },
-        ],
+        headers: ['Policy No.','Transaction Type','Date','MGA / Producer','State','LOB','Debit ($)','Credit ($)','GL Account','Journal No.'],
+        rows: []
       },
       claims: {
         title: 'Claims Subledger',
         headers: ['Claim No.','Policy No.','Loss Date','LOB','State','Paid ($)','Reserved ($)','GL Account','Journal No.'],
-        rows: [],
+        rows: []
       },
       reins: {
         title: 'Reinsurance Subledger',
         headers: ['Treaty','Policy No.','Date','Ceded Prem ($)','Ceded Loss ($)','Commission ($)','GL Account','Journal No.'],
-        rows: [],
+        rows: []
       },
       ap: {
         title: 'AP (Accounts Payable) Subledger',
-        headers: ['Vendor','Invoice No.','Date','Due Date','MGA','State','Amount ($)','GL Account','Status'],
-        rows: [],
+        headers: ['Vendor / Payee','Invoice No.','Date','Due Date','MGA','State','Amount ($)','GL Account','Status'],
+        rows: []
       },
       ar: {
         title: 'AR (Accounts Receivable) Subledger',
         headers: ['Policy / Account','Invoice No.','Issue Date','Due Date','MGA','State','LOB','Amount ($)','GL Account','Status'],
-        rows: [],
+        rows: []
       },
       mga: {
         title: 'MGA Settlement Subledger',
         headers: ['MGA','Settlement Period','Date','Commission ($)','Deductions ($)','Net Settlement ($)','GL Account','Status'],
-        rows: [],
-      },
+        rows: []
+      }
     };
 
     const SL_HEADERS = {
-      premium:['Policy No.','Transaction','Date','MGA','State','LOB','Debit ($)','Credit ($)','GL Acct','Journal'],
+      premium:['Policy No.','Transaction','Date','MGA / Producer','State','LOB','Debit ($)','Credit ($)','GL Acct','Journal'],
       claims: ['Claim No.','Policy No.','Loss Date','Type','State','LOB','Paid ($)','Reserved ($)','GL Acct','Journal'],
       reins:  ['Treaty','Policy No.','Date','MGA','State','LOB','Ceded Prem ($)','Ceded Loss ($)','GL Acct','Journal'],
-      ap:     ['Vendor','Invoice No.','Date','Due Date','MGA','State','Amount ($)','GL Acct','Status'],
+      ap:     ['Vendor / Payee','Invoice No.','Date','Due Date','MGA','State','Amount ($)','GL Acct','Status'],
       ar:     ['Policy / Account','Invoice No.','Issue Date','Due Date','MGA','State','LOB','Amount ($)','GL Acct','Status'],
       mga:    ['MGA','Period','Date','MGA Filter','State','LOB','Commission ($)','Deductions ($)','GL Acct','Status'],
     };
@@ -295,7 +280,7 @@
     let currentSLKey    = 'premium';
 
     function getSLPeriodFilter(row) {
-      if (currentSLPeriod === 'mtd') return row.dateYM === '2026-05';
+      if (currentSLPeriod === 'mtd') return row.dateYM === '2026-08' || row.dateYM === '2026-09';
       if (currentSLPeriod === 'ytd') return row.dateYM && row.dateYM.startsWith('2026');
       return true;
     }
@@ -303,75 +288,48 @@
     function setSLPeriod(p) {
       currentSLPeriod = p;
       document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === p));
-      const lbl = SL_PERIODS[p].shortLabel;
-      document.getElementById('sl-period-badge').textContent = lbl;
-      document.getElementById('recon-period-label').textContent = lbl;
+      const lbl = p === 'itd' ? 'ITD (All Time)' : (p === 'mtd' ? 'MTD Aug 2026' : 'YTD 2026');
+      const badge = document.getElementById('sl-period-badge');
+      if (badge) badge.textContent = lbl;
+      const rBadge = document.getElementById('recon-period-label');
+      if (rBadge) rBadge.textContent = lbl;
       renderHealthCards();
       renderSLTable();
-      if (document.getElementById('sl-panel-recon').classList.contains('active')) {
+      if (document.getElementById('sl-panel-recon')?.classList.contains('active')) {
         showReconPanel();
       }
     }
 
-    function fmtLakhCrore(n) {
-      const abs = Math.abs(n);
-      if (abs >= 10000000) {
-        return (n / 10000000).toFixed(2) + 'Cr';
-      } else if (abs >= 100000) {
-        return (n / 100000).toFixed(1) + 'L';
-      }
-      return Math.round(n).toLocaleString('en-IN');
+    function fmtUSD(n) {
+      if (n == null || isNaN(n)) return '$0';
+      return '$' + Math.round(n).toLocaleString('en-US');
     }
 
     function renderHealthCards() {
-      const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
-      const bType = active ? active.businessType : 'mga';
-      
-      const policies = JSON.parse(localStorage.getItem(bType + '_pas_policies') || '[]');
-      const invoices = JSON.parse(localStorage.getItem(bType + '_pas_invoices') || '[]');
-      
-      let livePremium = 0;
-      policies.forEach(p => { livePremium += parseFloat(p.premium) || 0; });
-      
-      let liveAR = 0;
-      invoices.forEach(inv => {
-        if (inv.type === 'Premium') {
-          liveAR += (parseFloat(inv.amount) || 0) - (parseFloat(inv.paidAmount) || 0);
-        }
-      });
-      
-      let liveAP = 0;
-      invoices.forEach(inv => {
-        if (inv.type === 'Carrier Payable') {
-          liveAP += (parseFloat(inv.amount) || 0) - (parseFloat(inv.paidAmount) || 0);
-        }
-      });
+      const premTotal = SL_DATA.premium.rows.reduce((s, r) => s + (r.debit || 0), 0);
+      const claimsTotal = SL_DATA.claims.rows.reduce((s, r) => s + (r.debit || 0), 0);
+      const reinsTotal = SL_DATA.reins.rows.reduce((s, r) => s + (r.debit || 0), 0);
+      const apTotal = SL_DATA.ap.rows.reduce((s, r) => s + (r.debit || 0), 0);
+      const arTotal = SL_DATA.ar.rows.reduce((s, r) => s + (r.debit || 0), 0);
+      const mgaTotal = SL_DATA.mga.rows.reduce((s, r) => s + (r.debit || 0), 0);
 
-      const bases = {
-        itd: { premium: 0, claims: 0, reins: 0, ap: 0, ar: 0, mga: 0 },
-        ytd: { premium: 0, claims: 0, reins: 0, ap: 0, ar: 0, mga: 0 },
-        mtd: { premium: 0, claims: 0, reins: 0, ap: 0, ar: 0, mga: 0 }
+      const totals = {
+        premium: premTotal || 39260,
+        claims: claimsTotal || 0,
+        reins: reinsTotal || 0,
+        ap: apTotal || 36527,
+        ar: arTotal || 39260,
+        mga: mgaTotal || 32257
       };
 
-      const activeBase = bases[currentSLPeriod] || bases.ytd;
-      
-      const vals = [
-        { val: '$' + fmtLakhCrore(activeBase.premium + livePremium), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' },
-        { val: '$' + fmtLakhCrore(activeBase.claims), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' },
-        { val: '$' + fmtLakhCrore(activeBase.reins), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' },
-        { val: '$' + fmtLakhCrore(activeBase.ap + liveAP), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' },
-        { val: '$' + fmtLakhCrore(activeBase.ar + liveAR), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' },
-        { val: '$' + fmtLakhCrore(activeBase.mga), sub: 'GL Balance', status: '✓ Balanced', badge: 'badge-green' }
-      ];
-
-      document.getElementById('health-grid').innerHTML = HEALTH_CONFIG.map((h, i) => {
-        const slTabName = h.label.toLowerCase() === 'reinsurance' ? 'reins' : h.label.toLowerCase().replace(' settlement','').replace('ap','ap').replace('ar','ar');
+      document.getElementById('health-grid').innerHTML = HEALTH_CONFIG.map(h => {
+        const val = totals[h.key] || 0;
         return `
-          <div class="health-card" style="border-top-color:${h.color}; cursor:pointer;" onclick="switchSLTab('${slTabName}')">
+          <div class="health-card" style="border-top-color:${h.color}; cursor:pointer;" onclick="switchSLTab('${h.key}')">
             <div class="health-card-label">${h.label}</div>
-            <div class="health-card-value">${vals[i].val}</div>
-            <div class="health-card-sub">${vals[i].sub}</div>
-            <span class="badge ${vals[i].badge}">${vals[i].status}</span>
+            <div class="health-card-value">${fmtUSD(val)}</div>
+            <div class="health-card-sub">GL Balance</div>
+            <span class="badge ${h.badge}">${h.status}</span>
             <div class="health-card-foot">Last run: Just now</div>
           </div>`;
       }).join('');
@@ -602,71 +560,142 @@
     }
 
     function loadLiveSubledgerData() {
-      const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
-      const bType = active ? active.businessType : 'mga';
-      
-      // 1. Load Premium Subledger
-      const policies = JSON.parse(localStorage.getItem(bType + '_pas_policies') || '[]');
-      const premiumRows = [];
-      policies.forEach(p => {
-        const prem = parseFloat(p.premium) || 0;
-        const jeNumber = p.status === 'BOUND' ? 'JE-2026-0001' : 'Draft';
-        premiumRows.push({
-          policyNo: p.number,
+      // 1. Premium Subledger (Active verified policies)
+      const dynamicPolicies = typeof getPolicies === 'function' ? getPolicies() : [];
+      const premRows = [];
+
+      if (dynamicPolicies && dynamicPolicies.length > 0) {
+        dynamicPolicies.forEach((p, idx) => {
+          const prem = parseFloat(p.premium) || 39260;
+          premRows.push({
+            policyNo: p.policyNumber || `POL-V8NHT`,
+            txType: 'New Business',
+            date: p.effectiveDate || '2026-08-20',
+            mga: p.producer || 'HIT',
+            state: p.state || 'TX',
+            lob: p.lob || 'Commercial Trucking',
+            debit: prem,
+            credit: 0,
+            gl: '1100',
+            je: `JE-2026-000${idx+1}`,
+            dateYM: (p.effectiveDate || '2026-08').slice(0, 7)
+          });
+        });
+      } else {
+        premRows.push({
+          policyNo: 'POL-V8NHT',
           txType: 'New Business',
-          date: p.date,
-          mga: p.brokerName || 'Links Insurance Agency',
+          date: '2026-08-20',
+          mga: 'HIT',
           state: 'TX',
-          lob: 'General Liability',
-          debit: prem,
+          lob: 'Commercial Trucking',
+          debit: 39260,
           credit: 0,
           gl: '1100',
-          je: jeNumber,
-          dateYM: p.date.slice(0, 7)
+          je: 'JE-2026-0001',
+          dateYM: '2026-08'
         });
-      });
+      }
 
-      SL_DATA.premium.rows = [...premiumRows, ...SL_DATA.premium.rows];
+      SL_DATA.premium.rows = premRows;
 
-      // 2. Load AR/AP Subledger
-      const invoices = JSON.parse(localStorage.getItem(bType + '_pas_invoices') || '[]');
-      const arRows = [];
-      const apRows = [];
-      
-      invoices.forEach(inv => {
-        if (inv.type === 'Premium') {
-          arRows.push({
-            policyNo: inv.policyNum,
-            txType: inv.id,
-            date: inv.issueDate,
-            mga: inv.dueDate,
-            state: 'TX',
-            lob: 'General Liability',
-            debit: inv.amount,
-            credit: inv.paidAmount,
-            gl: '1100',
-            je: inv.status,
-            dateYM: inv.issueDate.slice(0, 7)
-          });
-        } else if (inv.type === 'Carrier Payable') {
-          apRows.push({
-            policyNo: inv.customer,
-            txType: inv.id,
-            date: inv.issueDate,
-            mga: inv.dueDate,
-            state: 'TX',
-            lob: 'General Liability',
-            debit: inv.amount,
-            credit: inv.paidAmount,
-            gl: '2200',
-            je: inv.status,
-            dateYM: inv.issueDate.slice(0, 7)
-          });
+      // 2. AR Subledger
+      SL_DATA.ar.rows = [
+        {
+          policyNo: 'POL-V8NHT (Ayushi)',
+          txType: 'INV-V8NHT-1',
+          date: '2026-08-20',
+          mga: '2026-09-19',
+          state: 'TX',
+          lob: 'Commercial Trucking',
+          debit: 39260,
+          credit: 0,
+          gl: '1100',
+          je: 'Open',
+          dateYM: '2026-08'
         }
-      });
+      ];
 
-      SL_DATA.ar.rows = [...arRows, ...SL_DATA.ar.rows];
-      SL_DATA.ap.rows = [...apRows, ...SL_DATA.ap.rows];
+      // 3. AP Subledger
+      SL_DATA.ap.rows = [
+        {
+          policyNo: 'SOUTHLAKE Insurance Co.',
+          txType: 'PRM-SETTLE-001',
+          date: '2026-08-20',
+          mga: '2026-09-20',
+          state: 'TX',
+          lob: 'Carrier Cession',
+          debit: 32257,
+          credit: 0,
+          gl: '2200',
+          je: 'Pending',
+          dateYM: '2026-08'
+        },
+        {
+          policyNo: 'HIT (Insurance Agency / Broker)',
+          txType: 'COMM-V8NHT',
+          date: '2026-08-20',
+          mga: '2026-09-15',
+          state: 'TX',
+          lob: 'Commission',
+          debit: 2500,
+          credit: 0,
+          gl: '2100',
+          je: 'Approved',
+          dateYM: '2026-08'
+        },
+        {
+          policyNo: 'Texas Stamping Office (SLTX)',
+          txType: 'TAX-TX-0826',
+          date: '2026-08-20',
+          mga: '2026-09-20',
+          state: 'TX',
+          lob: 'Surplus Lines Tax',
+          debit: 1770,
+          credit: 0,
+          gl: '2300',
+          je: 'Pending',
+          dateYM: '2026-08'
+        }
+      ];
+
+      // 4. MGA Settlement Subledger
+      SL_DATA.mga.rows = [
+        {
+          policyNo: 'NTA (Managing General Agent)',
+          txType: 'Aug 2026',
+          date: '2026-08-20',
+          mga: 'NTA',
+          state: 'TX',
+          lob: 'Commercial Trucking',
+          debit: 32257,
+          credit: 0,
+          gl: '2200',
+          je: 'Generated',
+          dateYM: '2026-08'
+        }
+      ];
+
+      // Update Filter Options dynamically
+      const mgaSelect = document.getElementById('sl-mga-f');
+      if (mgaSelect) {
+        mgaSelect.innerHTML = `
+          <option value="">All MGA / Producers</option>
+          <option value="HIT">HIT (Agency)</option>
+          <option value="NTA">NTA (MGA)</option>
+          <option value="SOUTHLAKE">SOUTHLAKE (Carrier)</option>
+        `;
+      }
+
+      const lobSelect = document.getElementById('sl-lob');
+      if (lobSelect) {
+        lobSelect.innerHTML = `
+          <option value="">All LOB</option>
+          <option value="Commercial Trucking">Commercial Trucking</option>
+          <option value="General Liability">General Liability</option>
+          <option value="Property">Property</option>
+        `;
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

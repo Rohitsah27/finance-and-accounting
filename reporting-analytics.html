@@ -398,59 +398,71 @@
         };
 
       case 'Premium Register':
-        return {
-          cols: ['Policy #', 'Invoice #', 'Named Insured', 'Line of Business', 'Producer / Broker', 'Gross Premium ($)', 'Status'],
-          rows: [
-            ['POL-V8NHT', 'INV-V8NHT-1', 'Ayushi', 'Commercial Trucking', 'HIT', '$39,260.00', '<span class="badge badge-green">Bound / Invoiced</span>'],
-            ['POL-2026-0428', 'INV-30841', 'Harborview Medical Group', 'Professional Liability', 'Coastal Risk Advisors', '$18,420.00', '<span class="badge badge-green">Paid</span>'],
-            ['POL-2026-1934', 'PF-30842', 'Crestpoint Property Management', 'Commercial Property', 'Pinecrest Services', '$62,000.00', '<span class="badge badge-gray">Draft Binder</span>'],
-            ['POL-2026-9041', 'REC-30843', 'AC Retail Stores', 'General Liability', 'HIT', '$8,200.00', '<span class="badge badge-blue">Active</span>']
-          ]
-        };
+        {
+          const dynamicInvoices = typeof loadInvoices === 'function' ? loadInvoices() : [];
+          const rows = (dynamicInvoices && dynamicInvoices.length > 0) ? dynamicInvoices.map(inv => [
+            inv.policyNumber || 'POL-V8NHT',
+            inv.invoiceNumber || 'INV-V8NHT-1',
+            inv.customer || 'Ayushi',
+            inv.lob || 'Commercial Trucking',
+            inv.producer || 'HIT',
+            '$' + (parseFloat(inv.amount) || 39260).toLocaleString('en-US', {minimumFractionDigits: 2}),
+            `<span class="badge ${inv.status === 'Paid' ? 'badge-green' : 'badge-blue'}">${inv.status || 'Bound / Invoiced'}</span>`
+          ]) : [
+            ['POL-V8NHT', 'INV-V8NHT-1', 'Ayushi', 'Commercial Trucking', 'HIT', '$39,260.00', '<span class="badge badge-green">Bound / Invoiced</span>']
+          ];
+          return {
+            cols: ['Policy #', 'Invoice #', 'Named Insured', 'Line of Business', 'Producer / Broker', 'Gross Premium ($)', 'Status'],
+            rows: rows
+          };
+        }
 
       case 'Commission Report':
-        return {
-          cols: ['Producer / Agency', 'Policy Ref', 'Insured Name', 'Gross Premium ($)', 'Rate %', 'Net Commission ($)', 'Status'],
-          rows: [
-            ['HIT (Insurance Agency / Broker)', 'POL-V8NHT', 'Ayushi', '$39,260.00', '7.75%', '$2,500.00', '<span class="badge badge-green">Approved</span>'],
-            ['Coastal Risk Advisors', 'POL-2026-0428', 'Harborview Medical', '$18,420.00', '15.00%', '$2,763.00', '<span class="badge badge-green">Approved</span>'],
-            ['Pinecrest Insurance Services', 'POL-2026-1934', 'Crestpoint Property', '$62,000.00', '14.00%', '$8,680.00', '<span class="badge badge-gray">Pending</span>'],
-            ['HIT (Insurance Agency / Broker)', 'POL-2026-9041', 'AC Retail Stores', '$8,200.00', '15.00%', '$1,230.00', '<span class="badge badge-green">Approved</span>']
-          ]
-        };
+        {
+          const rows = [
+            ['HIT (Insurance Agency / Broker)', 'POL-V8NHT', 'Ayushi', '$39,260.00', '7.75%', '$2,500.00', '<span class="badge badge-green">Approved</span>']
+          ];
+          return {
+            cols: ['Producer / Agency', 'Policy Ref', 'Insured Name', 'Gross Premium ($)', 'Rate %', 'Net Commission ($)', 'Status'],
+            rows: rows
+          };
+        }
 
       case 'Tax Liability Report':
-        return {
-          cols: ['Tax Jurisdiction', 'State', 'Policy Reference', 'Taxable Premium ($)', 'Statutory Rate %', 'Tax Due ($)', 'Status'],
-          rows: [
+        {
+          const rows = [
             ['Texas Surplus Lines Tax', 'Texas', 'POL-V8NHT (Ayushi)', '$32,257.00', '4.850%', '$1,590.00', '<span class="badge badge-orange">Due 09/20/2026</span>'],
-            ['Texas - Denton County Local Surcharge', 'Texas', 'POL-V8NHT (Ayushi)', '$32,257.00', '0.550%', '$180.00', '<span class="badge badge-orange">Due 09/20/2026</span>'],
-            ['California Surplus Lines SLA', 'California', 'POL-2026-0428 (Harborview)', '$18,420.00', '3.000%', '$552.60', '<span class="badge badge-green">Ready for Filing</span>'],
-            ['Florida Surplus Lines FSLSO', 'Florida', 'General Portfolios', '$24,000.00', '5.000%', '$1,200.00', '<span class="badge badge-green">Filed</span>']
-          ]
-        };
+            ['Texas - Denton County Local Surcharge', 'Texas', 'POL-V8NHT (Ayushi)', '$32,257.00', '0.550%', '$180.00', '<span class="badge badge-orange">Due 09/20/2026</span>']
+          ];
+          return {
+            cols: ['Tax Jurisdiction', 'State', 'Policy Reference', 'Taxable Premium ($)', 'Statutory Rate %', 'Tax Due ($)', 'Status'],
+            rows: rows
+          };
+        }
 
       case 'AR Aging':
-        return {
-          cols: ['Customer / Insured', 'Policy Ref', 'Current ($)', '1–30 Days ($)', '31–60 Days ($)', '90+ Days ($)', 'Total AR ($)'],
-          rows: [
-            ['Ayushi', 'POL-V8NHT', '$39,260.00', ' - ', ' - ', ' - ', '<strong>$39,260.00</strong>'],
-            ['Harborview Medical Group', 'POL-2026-0428', ' - ', '$18,420.00', ' - ', ' - ', '<strong>$18,420.00</strong>'],
-            ['Crestpoint Property Management', 'POL-2026-1934', '$62,000.00', ' - ', ' - ', ' - ', '<strong>$62,000.00</strong>'],
-            ['Meridian Logistics LLC', 'POL-2026-5521', '$75,075.00', '$139,425.00', ' - ', ' - ', '<strong>$214,500.00</strong>']
-          ]
-        };
+        {
+          const rows = [
+            ['Ayushi', 'POL-V8NHT', '$39,260.00', ' - ', ' - ', ' - ', '<strong>$39,260.00</strong>']
+          ];
+          return {
+            cols: ['Customer / Insured', 'Policy Ref', 'Current ($)', '1–30 Days ($)', '31–60 Days ($)', '90+ Days ($)', 'Total AR ($)'],
+            rows: rows
+          };
+        }
 
       case 'AP Aging':
-        return {
-          cols: ['Payee / Entity', 'Type', 'Current ($)', '1–30 Days ($)', '31–60 Days ($)', 'Total Due ($)'],
-          rows: [
+        {
+          const rows = [
             ['SOUTHLAKE Insurance Co.', 'Carrier Settlement', '$32,257.00', ' - ', ' - ', '<strong>$32,257.00</strong>'],
             ['HIT (Insurance Agency / Broker)', 'Producer Commission', '$2,500.00', ' - ', ' - ', '<strong>$2,500.00</strong>'],
-            ['Texas Stamping Office (SLTX)', 'Surplus Lines Tax', '$1,770.00', ' - ', ' - ', '<strong>$1,770.00</strong>'],
-            ['Munich Re Reinsurance Treaty', 'Reinsurance Cession', '$18,250.00', ' - ', ' - ', '<strong>$18,250.00</strong>']
-          ]
-        };
+            ['Texas Stamping Office (SLTX)', 'Surplus Lines Tax', '$1,770.00', ' - ', ' - ', '<strong>$1,770.00</strong>']
+          ];
+          return {
+            cols: ['Payee / Entity', 'Type', 'Current ($)', '1–30 Days ($)', '31–60 Days ($)', 'Total Due ($)'],
+            rows: rows
+          };
+        }
 
       case 'P&L (Income Statement)':
         return {

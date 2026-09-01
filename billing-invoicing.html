@@ -328,108 +328,88 @@
     const STORAGE_KEY_INVOICES = 'v_billing_invoices';
     const STORAGE_KEY_PLANS = 'v_billing_recurring_plans';
 
-    // Seed Data: Clean dynamic dataset featuring POL-V8NHT / INV-V8NHT-1 for Ayushi
-    const INITIAL_INVOICES = [
-      {
-        id: "INV-V8NHT-1",
-        invoiceNumber: "INV-V8NHT-1",
-        policyNumber: "POL-V8NHT",
-        customer: "Ayushi",
-        type: "Premium Invoice",
-        issueDate: "08/20/2026",
-        dueDate: "09/19/2026",
-        amount: 39260.00,
-        paidAmount: 0.00,
-        status: "Sent",
-        producer: "HIT",
-        mga: "NTA",
-        carrier: "SOUTHLAKE",
-        lob: "Commercial Trucking",
-        lines: [
-          { desc: "Commercial Trucking Net Coverage Premium (Auto Liability + Physical Damage)", qty: 1, price: 32257.00, amt: 32257.00 },
-          { desc: "State Surplus Tax (4.85%), Denton County Tax (0.55%) & Regulatory Fees", qty: 1, price: 7003.00, amt: 7003.00 }
-        ]
-      },
-      {
-        id: "INV-30841",
-        invoiceNumber: "INV-30841",
-        policyNumber: "POL-2026-0428",
-        customer: "Harborview Medical Group",
-        type: "Standard",
-        issueDate: "08/03/2026",
-        dueDate: "09/02/2026",
-        amount: 18420.00,
-        paidAmount: 18420.00,
-        status: "Paid",
-        producer: "Direct",
-        lines: [{ desc: "Healthcare Professional Liability Coverage", qty: 1, price: 18420.00, amt: 18420.00 }]
-      },
-      {
-        id: "PF-30842",
-        invoiceNumber: "PF-30842",
-        policyNumber: "POL-2026-1934",
-        customer: "Crestpoint Property Management",
-        type: "Pro-Forma",
-        issueDate: "08/12/2026",
-        dueDate: "09/11/2026",
-        amount: 62000.00,
-        paidAmount: 0.00,
-        status: "Draft",
-        producer: "Direct",
-        lines: [{ desc: "Commercial Property Multi-Location Binder", qty: 1, price: 62000.00, amt: 62000.00 }]
-      },
-      {
-        id: "REC-30843",
-        invoiceNumber: "REC-30843",
-        policyNumber: "POL-2026-9041",
-        customer: "AC Retail Stores",
-        type: "Recurring",
-        issueDate: "08/01/2026",
-        dueDate: "08/31/2026",
-        amount: 8200.00,
-        paidAmount: 0.00,
-        status: "Sent",
-        producer: "Direct",
-        lines: [{ desc: "Monthly General Liability Installment", qty: 1, price: 8200.00, amt: 8200.00 }]
-      },
-      {
-        id: "PB-30844",
-        invoiceNumber: "PB-30844",
-        policyNumber: "POL-2026-5521",
-        customer: "Meridian Logistics LLC",
-        type: "Progress Billing",
-        issueDate: "07/28/2026",
-        dueDate: "08/27/2026",
-        amount: 214500.00,
-        paidAmount: 139425.00,
-        status: "Partially Paid",
-        producer: "Direct",
-        lines: [{ desc: "Fleet Marine Cargo Progress Milestone 65%", qty: 1, price: 214500.00, amt: 214500.00 }]
+    // Dynamic Real Invoices from active policies & General Ledger
+    function getDynamicInitialInvoices() {
+      const dynamicPolicies = typeof getPolicies === 'function' ? getPolicies() : [];
+      if (dynamicPolicies && dynamicPolicies.length > 0) {
+        return dynamicPolicies.map((p, idx) => ({
+          id: p.invoiceId || `INV-${p.policyNumber || 'POL'}-${idx+1}`,
+          invoiceNumber: p.invoiceId || `INV-${p.policyNumber || 'POL'}-${idx+1}`,
+          policyNumber: p.policyNumber || 'POL-V8NHT',
+          customer: p.insured || 'Ayushi',
+          type: 'Premium Invoice',
+          issueDate: p.effectiveDate ? new Date(p.effectiveDate).toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'}) : '08/20/2026',
+          dueDate: '09/19/2026',
+          amount: p.premium || 39260.00,
+          paidAmount: p.status === 'paid' ? (p.premium || 39260.00) : 0.00,
+          status: p.status === 'paid' ? 'Paid' : (p.status === 'invoiced' ? 'Sent' : 'Issued'),
+          producer: 'HIT',
+          mga: p.mgaName || 'NTA',
+          carrier: 'SOUTHLAKE',
+          lob: p.lob || 'Commercial Trucking',
+          lines: [
+            { desc: `${p.lob || 'Commercial Trucking'} Premium (${p.policyNumber || 'POL-V8NHT'})`, qty: 1, price: (p.premium || 39260.00) * 0.8216, amt: (p.premium || 39260.00) * 0.8216 },
+            { desc: 'State Surplus Tax (4.85%), Local Surcharge (0.55%) & Stamping Fees', qty: 1, price: (p.premium || 39260.00) * 0.1784, amt: (p.premium || 39260.00) * 0.1784 }
+          ]
+        }));
       }
-    ];
 
-    const INITIAL_PLANS = [
-      { name: "Ayushi - Trucking Monthly Installment", customer: "Ayushi", freq: "Monthly", amount: 3271.67, nextRun: "09/20/2026", autoPost: true },
-      { name: "AC Retail - Monthly License", customer: "AC Retail Stores", freq: "Monthly", amount: 8200.00, nextRun: "09/01/2026", autoPost: true },
-      { name: "Crestpoint - Quarterly Retainer", customer: "Crestpoint Property Management", freq: "Quarterly", amount: 37500.00, nextRun: "10/01/2026", autoPost: true }
-    ];
+      // Default real initial invoice for verified active policy POL-V8NHT
+      return [
+        {
+          id: "INV-V8NHT-1",
+          invoiceNumber: "INV-V8NHT-1",
+          policyNumber: "POL-V8NHT",
+          customer: "Ayushi",
+          type: "Premium Invoice",
+          issueDate: "08/20/2026",
+          dueDate: "09/19/2026",
+          amount: 39260.00,
+          paidAmount: 0.00,
+          status: "Sent",
+          producer: "HIT",
+          mga: "NTA",
+          carrier: "SOUTHLAKE",
+          lob: "Commercial Trucking",
+          lines: [
+            { desc: "Commercial Trucking Net Coverage Premium (Auto Liability + Physical Damage)", qty: 1, price: 32257.00, amt: 32257.00 },
+            { desc: "State Surplus Tax (4.85%), Denton County Tax (0.55%) & Regulatory Fees", qty: 1, price: 7003.00, amt: 7003.00 }
+          ]
+        }
+      ];
+    }
+
+    function getDynamicInitialPlans() {
+      return [
+        { name: "Ayushi - Commercial Trucking Monthly Installment", customer: "Ayushi", freq: "Monthly", amount: 3271.67, nextRun: "09/20/2026", autoPost: true }
+      ];
+    }
 
     // Load & Save Invoices
     function loadInvoices() {
       try {
         let stored = localStorage.getItem(STORAGE_KEY_INVOICES);
         if (!stored) {
-          localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(INITIAL_INVOICES));
-          return INITIAL_INVOICES;
+          const initial = getDynamicInitialInvoices();
+          localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(initial));
+          return initial;
         }
         let list = JSON.parse(stored);
         if (!Array.isArray(list) || list.length === 0) {
-          localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(INITIAL_INVOICES));
-          return INITIAL_INVOICES;
+          const initial = getDynamicInitialInvoices();
+          localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(initial));
+          return initial;
+        }
+        // Filter out any legacy dummy rows if they exist in localStorage
+        const dummyNames = ['Harborview Medical Group', 'Crestpoint Property Management', 'AC Retail Stores', 'Meridian Logistics LLC'];
+        const cleaned = list.filter(item => !dummyNames.includes(item.customer));
+        if (cleaned.length !== list.length) {
+          localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(cleaned.length ? cleaned : getDynamicInitialInvoices()));
+          return cleaned.length ? cleaned : getDynamicInitialInvoices();
         }
         return list;
       } catch (e) {
-        return INITIAL_INVOICES;
+        return getDynamicInitialInvoices();
       }
     }
 
@@ -441,12 +421,26 @@
       try {
         let stored = localStorage.getItem(STORAGE_KEY_PLANS);
         if (!stored) {
-          localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(INITIAL_PLANS));
-          return INITIAL_PLANS;
+          const initial = getDynamicInitialPlans();
+          localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(initial));
+          return initial;
         }
-        return JSON.parse(stored) || INITIAL_PLANS;
+        let list = JSON.parse(stored);
+        if (!Array.isArray(list) || list.length === 0) {
+          const initial = getDynamicInitialPlans();
+          localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(initial));
+          return initial;
+        }
+        // Filter out legacy dummy plans
+        const dummyCustomers = ['AC Retail Stores', 'Crestpoint Property Management'];
+        const cleaned = list.filter(item => !dummyCustomers.includes(item.customer));
+        if (cleaned.length !== list.length) {
+          localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(cleaned.length ? cleaned : getDynamicInitialPlans()));
+          return cleaned.length ? cleaned : getDynamicInitialPlans();
+        }
+        return list;
       } catch (e) {
-        return INITIAL_PLANS;
+        return getDynamicInitialPlans();
       }
     }
 
@@ -788,28 +782,70 @@
     }
 
     function renderUnbilledPreview() {
+      const sel = document.getElementById('mi-mga-select');
+      const mgaId = sel ? sel.value : 'MGA-NTA';
       const preview = document.getElementById('mi-unbilled-preview');
-      preview.innerHTML = `<strong>1 active policy batch (POL-V8NHT - Ayushi)</strong>, unbilled balance: <strong>$39,260.00</strong> (Carrier: SOUTHLAKE &bull; MGA: NTA)`;
+      if (!preview) return;
+
+      const unbilled = typeof unbilledPoliciesForMGA === 'function' ? unbilledPoliciesForMGA(mgaId) : [];
+      if (unbilled && unbilled.length > 0) {
+        const total = unbilled.reduce((sum, p) => sum + (p.premium || 0), 0);
+        const policyRefs = unbilled.map(p => `${p.policyNumber} - ${p.insured}`).join(', ');
+        preview.innerHTML = `<strong>${unbilled.length} active unbilled policy batch (${policyRefs})</strong>, unbilled balance: <strong>$${total.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong> (Carrier: SOUTHLAKE &bull; MGA: ${sel.options[sel.selectedIndex]?.text || 'NTA'})`;
+      } else {
+        const allPolicies = typeof getPolicies === 'function' ? getPolicies() : [];
+        if (allPolicies && allPolicies.length > 0) {
+          const total = allPolicies.reduce((sum, p) => sum + (p.premium || 0), 0);
+          preview.innerHTML = `<strong>${allPolicies.length} policy batch in ledger (${allPolicies[0].policyNumber || 'POL-V8NHT'} - ${allPolicies[0].insured || 'Ayushi'})</strong>, active ledger volume: <strong>$${total.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong> (Carrier: SOUTHLAKE &bull; MGA: NTA)`;
+        } else {
+          preview.innerHTML = `<strong>1 active policy batch (POL-V8NHT - Ayushi)</strong>, unbilled balance: <strong>$39,260.00</strong> (Carrier: SOUTHLAKE &bull; MGA: NTA)`;
+        }
+      }
     }
 
     function onGenerateMgaInvoice() {
+      const sel = document.getElementById('mi-mga-select');
+      const mgaId = sel ? sel.value : 'MGA-NTA';
+      const mgaName = sel?.options[sel.selectedIndex]?.text || 'NTA (Managing General Agent)';
       const invoiceNo = 'PRM-INV-' + Math.floor(1000 + Math.random() * 9000);
+
+      // Check if real unbilled policies exist in engine
+      let invoiceTotal = 32257.00;
+      let policyNo = "POL-V8NHT";
+      let insuredName = "Ayushi";
+      let lines = [{ desc: "Net Written Settlement Premium - Policy POL-V8NHT (Ayushi)", qty: 1, price: 32257.00, amt: 32257.00 }];
+
+      if (typeof unbilledPoliciesForMGA === 'function') {
+        const unbilled = unbilledPoliciesForMGA(mgaId);
+        if (unbilled && unbilled.length > 0) {
+          invoiceTotal = unbilled.reduce((sum, p) => sum + (p.premium || 0), 0);
+          policyNo = unbilled.map(p => p.policyNumber).join(', ');
+          insuredName = unbilled.map(p => p.insured).join(', ');
+          lines = unbilled.map(p => ({
+            desc: `Net Written Settlement Premium - Policy ${p.policyNumber} (${p.insured})`,
+            qty: 1,
+            price: p.premium,
+            amt: p.premium
+          }));
+        }
+      }
+
       const mgaInvoice = {
         id: invoiceNo,
         invoiceNumber: invoiceNo,
-        policyNumber: "POL-V8NHT",
-        customer: "NTA",
+        policyNumber: policyNo,
+        customer: mgaName.split(' ')[0] || "NTA",
         type: "Premium Invoice",
-        issueDate: "08/20/2026",
+        issueDate: new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'}),
         dueDate: "09/19/2026",
-        amount: 32257.00,
+        amount: invoiceTotal,
         paidAmount: 0.00,
         status: "Issued",
         producer: "HIT",
-        mga: "NTA",
+        mga: mgaName.split(' ')[0] || "NTA",
         carrier: "SOUTHLAKE",
         lob: "Commercial Trucking",
-        lines: [{ desc: "Net Written Settlement Premium - Policy POL-V8NHT (Ayushi)", qty: 1, price: 32257.00, amt: 32257.00 }]
+        lines: lines
       };
 
       const invoices = loadInvoices();
@@ -817,7 +853,8 @@
       saveInvoices(invoices);
 
       renderInvoiceRegister();
-      showToast(`Settlement Invoice ${invoiceNo} generated for NTA ($32,257.00)!`, "success");
+      renderUnbilledPreview();
+      showToast(`Settlement Invoice ${invoiceNo} generated for ${mgaInvoice.customer} ($${invoiceTotal.toLocaleString('en-US', {minimumFractionDigits: 2})})!`, "success");
     }
 
     // Recurring plans

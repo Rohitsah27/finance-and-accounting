@@ -246,11 +246,14 @@ const DOCS_NAV = [
 ];
 
 function initDocsLayout(activePageId) {
-  // 1. Render Topbar
+  // 1. Render Topbar with Mobile Hamburger
   const topbar = document.getElementById('docs-topbar');
   if (topbar) {
     topbar.innerHTML = `
       <div class="topbar-left">
+        <button class="mobile-menu-toggle" id="docs-mobile-toggle" aria-label="Toggle navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <a href="index.html" class="brand-logo">
           <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
           <span>VeriDex Docs</span>
@@ -261,16 +264,16 @@ function initDocsLayout(activePageId) {
       <!-- Live Search -->
       <div class="search-box">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <input type="text" id="doc-search-input" class="search-input" placeholder="Search modules, GL accounts, DBA / DBM / DBC flows..." oninput="handleDocSearch(this.value)">
+        <input type="text" id="doc-search-input" class="search-input" placeholder="Search modules, GL, DBA / DBM / DBC..." oninput="handleDocSearch(this.value)">
         <span class="search-kbd">Ctrl+K</span>
       </div>
 
       <div class="topbar-actions">
-        <a href="../dictionary/index.html" class="nav-btn nav-btn-secondary">
+        <a href="../dictionary/index.html" class="nav-btn nav-btn-secondary" title="Data Dictionary">
           <i class="fa-solid fa-book-bookmark"></i>
           <span>Dictionary</span>
         </a>
-        <a href="../insurance-flow-simulator.html" class="nav-btn nav-btn-primary">
+        <a href="../insurance-flow-simulator.html" class="nav-btn nav-btn-primary" title="Live Simulator">
           <i class="fa-solid fa-play"></i>
           <span>Live Simulator</span>
         </a>
@@ -278,10 +281,19 @@ function initDocsLayout(activePageId) {
     `;
   }
 
-  // 2. Render Sidebar with Parent Categories & Submodule Items
+  // 2. Render Sidebar with Mobile Header & Items
   const sidebar = document.getElementById('docs-sidebar');
   if (sidebar) {
-    let html = '';
+    let html = `
+      <div class="sidebar-mobile-header">
+        <div class="sidebar-mobile-title">
+          <i class="fa-solid fa-book-open" style="color:var(--brand);"></i>
+          <span>Documentation Menu</span>
+        </div>
+        <button class="sidebar-close-btn" id="docs-sidebar-close" aria-label="Close navigation">&times;</button>
+      </div>
+    `;
+
     DOCS_NAV.forEach(group => {
       const hasActiveChild = group.children.some(c => c.id === activePageId);
       html += `
@@ -309,12 +321,78 @@ function initDocsLayout(activePageId) {
     sidebar.innerHTML = html;
   }
 
-  // 3. Setup Keyboard Shortcut Ctrl+K
+  // 3. Inject Backdrop for Mobile Drawer
+  let backdrop = document.getElementById('docs-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'docs-backdrop';
+    backdrop.className = 'docs-backdrop';
+    document.body.appendChild(backdrop);
+  }
+
+  // 4. Setup Mobile Drawer Toggle Events
+  const mobileToggle = document.getElementById('docs-mobile-toggle');
+  const sidebarClose = document.getElementById('docs-sidebar-close');
+
+  function openMobileNav() {
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (backdrop) backdrop.classList.add('active');
+    document.body.classList.add('no-scroll');
+  }
+
+  function closeMobileNav() {
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+  }
+
+  if (mobileToggle) {
+    mobileToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMobileNav();
+    });
+  }
+
+  if (sidebarClose) {
+    sidebarClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMobileNav();
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeMobileNav);
+  }
+
+  // Close drawer when clicking a navigation link on mobile
+  if (sidebar) {
+    sidebar.querySelectorAll('.nav-sub-item').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 900) {
+          closeMobileNav();
+        }
+      });
+    });
+  }
+
+  // 5. Wrap standalone tables with responsive wrappers on mobile
+  document.querySelectorAll('table.je-table, table.data-tbl').forEach(tbl => {
+    if (!tbl.parentElement.classList.contains('table-responsive')) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive';
+      tbl.parentNode.insertBefore(wrapper, tbl);
+      wrapper.appendChild(tbl);
+    }
+  });
+
+  // 6. Setup Keyboard Shortcut Ctrl+K & Escape
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       const input = document.getElementById('doc-search-input');
       if (input) input.focus();
+    } else if (e.key === 'Escape') {
+      closeMobileNav();
     }
   });
 }
