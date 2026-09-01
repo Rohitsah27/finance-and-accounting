@@ -1588,6 +1588,11 @@ body.sb-collapsed .main-content {
   font-weight: 600;
   color: var(--color-ink);
 }
+.table-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 .data-table,
 .v-table,
@@ -1817,6 +1822,23 @@ textarea:focus {
   flex: 0 1 auto;
 }
 
+.search-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.search-wrapper svg {
+  position: absolute;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: #9CA3AF;
+  pointer-events: none;
+}
+.search-wrapper .filter-input {
+  padding-left: 32px;
+}
+
 .filter-input,
 .sr-search,
 .ptc-search {
@@ -1826,7 +1848,7 @@ textarea:focus {
   font-family: var(--font-ui);
   color: var(--color-ink);
   background: #FFFFFF;
-  border: 1px solid var(--color-border);
+  border: 1px solid #D1D5DB;
   border-radius: 4px;
   outline: none;
   width: auto;
