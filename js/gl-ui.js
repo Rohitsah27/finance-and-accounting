@@ -77,29 +77,105 @@ function closeAccountLedgerModal() {
 const GL_JE_STATUS_BADGE = { posted: 'badge-green', pending_approval: 'badge-orange', rejected: 'badge-red', draft: 'badge-gray' };
 const GL_JE_STATUS_LABEL = { posted: 'Posted', pending_approval: 'Pending Approval', rejected: 'Rejected', draft: 'Draft' };
 
+function formatCleanJeDescription(desc) {
+  if (!desc) return 'Standard Journal Entry';
+  let s = desc;
+  if (s.includes('POLICY_BINDING_INVOICED')) {
+    s = s.replace(/POLICY_BINDING_INVOICED\s*[-–:]*\s*/gi, 'Policy binding & premium invoice issued for ');
+  } else if (s.includes('PREMIUM_ADJUSTED')) {
+    s = s.replace(/PREMIUM_ADJUSTED\s*[-–:]*\s*/gi, 'Policy endorsement & premium adjustment for ');
+  } else if (s.includes('PAYMENT_RECEIVED')) {
+    s = s.replace(/PAYMENT_RECEIVED\s*[-–:]*\s*/gi, 'Premium collection receipt for ');
+  } else if (s.includes('COMMISSION_CALCULATED')) {
+    s = s.replace(/COMMISSION_CALCULATED\s*[-–:]*\s*/gi, 'Producer commission accrual & allocation for ');
+  } else if (s.includes('CARRIER_PAYMENT_COMPLETED')) {
+    s = s.replace(/CARRIER_PAYMENT_COMPLETED\s*[-–:]*\s*/gi, 'Net premium settlement remittance to carrier for ');
+  } else if (s.includes('POLICY_CANCELLED')) {
+    s = s.replace(/POLICY_CANCELLED\s*[-–:]*\s*/gi, 'Policy cancellation & unearned premium reversal for ');
+  }
+  return s;
+}
+
+function formatCleanLineDesc(desc) {
+  if (!desc) return '';
+  const map = {
+    'Premium AR': 'Premium Receivable',
+    'Net Carrier Payable': 'Net Carrier Settlement Payable',
+    'Premium Taxes & Fees Payable (TX)': 'Surplus Lines Taxes & Regulatory Fees (TX)',
+    'MGA Comm. & Producer Revenue': 'MGA Override & Producer Commission Revenue',
+    'Broker/Producer Commission Expense': 'Producer Commission Expense',
+    'Broker Commission Payable': 'Producer Commission Payable',
+    'Clear premium AR': 'Clear Premium Receivable',
+    'Partial clear premium AR': 'Partial Clear Premium Receivable',
+    'Premium Receipt': 'Customer Premium Receipt',
+    'Disburse Settle Payment to Carrier': 'Disburse Net Carrier Settlement',
+    'Clear Carrier Payable': 'Clear Carrier Settlement Payable',
+    'Unapplied Customer Credit': 'Unapplied Cash / Customer Credit',
+    'MGA Commission Expense': 'MGA Commission Override Expense',
+    'Gross Written Premium Revenue': 'Gross Written Premium Revenue',
+    'Receivable from MGA': 'Direct Receivable from MGA',
+    'Settlement cash received from MGA': 'Settlement Cash Received from MGA',
+    'Clear MGA Receivable': 'Clear MGA Settlement Receivable'
+  };
+
+  let clean = desc;
+  Object.keys(map).forEach(k => {
+    if (clean.startsWith(k)) {
+      clean = clean.replace(k, map[k]);
+    }
+  });
+  return clean;
+}
+
+function formatDimLabel(k) {
+  const map = {
+    mga: 'MGA',
+    lob: 'LOB',
+    state: 'State',
+    cost_center: 'Cost Center',
+    location: 'Location',
+    broker: 'Broker'
+  };
+  return map[k.toLowerCase()] || k.toUpperCase();
+}
+
 function openJournalEntryModal(jeId) {
   ensureGlUiModals();
   const je = getJournalEntries().find(j => j.id === jeId);
   if (!je) { showToast('Journal entry not found', 'error'); return; }
   document.getElementById('gl-je-modal-title').textContent = je.number;
-  const dimBits = l => Object.keys(l.dims || {}).filter(k => l.dims[k]).map(k => `<span class="v-tree-badge">${k}: ${l.dims[k]}</span>`).join(' ');
+  
+  const dimBits = l => {
+    const keys = Object.keys(l.dims || {}).filter(k => l.dims[k]);
+    if (!keys.length) return '';
+    return `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">` +
+      keys.map(k => `<span class="badge badge-gray" style="font-size:9.5px; padding:1px 6px; font-weight:600; text-transform:none; border-radius:3px;">${formatDimLabel(k)}: ${l.dims[k]}</span>`).join('') +
+      `</div>`;
+  };
+
   const linesHtml = je.lines.map(l => `
     <tr>
-      <td>${l.acct}${(typeof findGLAccountByCode === 'function' && findGLAccountByCode(l.acct)) ? ' - ' + findGLAccountByCode(l.acct).name : ''}</td>
-      <td>${l.desc || ''} ${dimBits(l)}</td>
-      <td class="r">${l.debit ? fmtCurrency(l.debit) : ' - '}</td>
-      <td class="r">${l.credit ? fmtCurrency(l.credit) : ' - '}</td>
+      <td style="font-weight:600; color:var(--navy);">${l.acct}${(typeof findGLAccountByCode === 'function' && findGLAccountByCode(l.acct)) ? ' - ' + findGLAccountByCode(l.acct).name : ''}</td>
+      <td>
+        <div style="font-size:12.5px; color:var(--gray-800);">${formatCleanLineDesc(l.desc || '')}</div>
+        ${dimBits(l)}
+      </td>
+      <td class="r" style="font-weight:600;">${l.debit ? fmtCurrency(l.debit) : ' - '}</td>
+      <td class="r" style="font-weight:600;">${l.credit ? fmtCurrency(l.credit) : ' - '}</td>
     </tr>`).join('');
+
   document.getElementById('gl-je-modal-body').innerHTML = `
-    <div class="v-config-row head" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="v-config-row head" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:8px;">
       <div>Date: <strong>${je.date || (je.createdAt || '').slice(0, 10)}</strong></div>
       <div>Status: <span class="badge ${GL_JE_STATUS_BADGE[je.status] || 'badge-gray'}">${GL_JE_STATUS_LABEL[je.status] || je.status}</span></div>
       <div>Created by: <strong>${je.createdBy || ' - '}</strong></div>
     </div>
-    <p style="margin:10px 0;font-size:12.5px;color:var(--gray-700);">${je.description || ''}</p>
+    <div style="margin:10px 0 14px; font-size:12.5px; font-weight:600; color:var(--navy); background:var(--gray-50); padding:8px 12px; border-radius:6px; border-left:3px solid var(--brand);">
+      ${formatCleanJeDescription(je.description)}
+    </div>
     <div style="overflow-x:auto;">
     <table class="data-table">
-      <thead><tr><th>Account</th><th>Description / Dimensions</th><th class="r">Debit</th><th class="r">Credit</th></tr></thead>
+      <thead><tr><th>Account</th><th>Description &amp; Dimensions</th><th class="r">Debit</th><th class="r">Credit</th></tr></thead>
       <tbody>${linesHtml}</tbody>
       <tfoot><tr class="total-row"><td colspan="2" style="text-align:right;font-weight:700;">Totals</td><td class="r"><strong>${fmtCurrency(jeTotalDebit(je))}</strong></td><td class="r"><strong>${fmtCurrency(jeTotalCredit(je))}</strong></td></tr></tfoot>
     </table>

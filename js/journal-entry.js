@@ -166,11 +166,12 @@ function renderRecentJE() {
   tbody.innerHTML = entries.map(je => {
     const debit = jeTotalDebit(je), credit = jeTotalCredit(je);
     const dateVal = je.date || je.createdAt.slice(0, 10);
+    const cleanDesc = typeof formatCleanJeDescription === 'function' ? formatCleanJeDescription(je.description) : je.description;
     return `<tr>
       <td><input type="checkbox" class="table-check"></td>
       <td class="cell-link" style="cursor:pointer;" onclick="openJournalEntryModal('${je.id}')">${je.number}</td>
       <td>${new Date(dateVal).toLocaleDateString('en-GB')}</td>
-      <td>${je.description}</td>
+      <td>${cleanDesc}</td>
       <td>${debit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
       <td>${credit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
       <td><span class="badge ${JE_STATUS_BADGE[je.status] || 'badge-gray'}">${JE_STATUS_LABEL[je.status] || je.status}</span></td>

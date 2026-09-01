@@ -700,60 +700,84 @@
     const netPremium = premium - commission;
     const paid = parseFloat(evt.financials.payment_amount) || 0;
 
+    // Helper for simple sentences
+    function getCleanJeSentence(eventType, polNum, insName, invNum) {
+      const inv = invNum ? ` · Invoice ${invNum}` : '';
+      const ins = insName ? ` (${insName})` : '';
+      switch (eventType) {
+        case 'POLICY_BINDING_INVOICED':
+          return `Policy binding and premium invoice issued for ${polNum}${ins}${inv}`;
+        case 'PREMIUM_ADJUSTED':
+          return `Policy endorsement and premium adjustment for ${polNum}${ins}`;
+        case 'PAYMENT_RECEIVED':
+          return `Premium payment received from customer for ${polNum}${ins}`;
+        case 'COMMISSION_CALCULATED':
+          return `Producer commission calculated and allocated for ${polNum}${ins}`;
+        case 'CARRIER_PAYMENT_COMPLETED':
+          return `Net premium settlement payment disbursed to carrier for ${polNum}${ins}`;
+        case 'POLICY_CANCELLED':
+          return `Policy cancellation and unearned premium reversal for ${polNum}${ins}`;
+        case 'POLICY_RENEWED':
+          return `Policy renewal binding and annual invoice for ${polNum}${ins}`;
+        default:
+          return `${eventType.replace(/_/g, ' ').toLowerCase()} for ${polNum}${ins}`;
+      }
+    }
+
     // --- 1. MGA GL lines ---
     const mgaLines = [];
     if (evt.event_type === 'POLICY_BINDING_INVOICED' || evt.event_type === 'PREMIUM_ADJUSTED') {
-      mgaLines.push({ acct: '1100', debit: Math.abs(totalBilled), credit: 0, desc: `Premium AR - ${evt.parties.insured_name} (${evt.invoice_number || evt.policy.policy_number})`, dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
-      mgaLines.push({ acct: '2200', debit: 0, credit: Math.abs(netPremium), desc: `Net Carrier Payable - ${evt.parties.carrier_name}`, dims: { cost_center: '00 - Corporate' } });
+      mgaLines.push({ acct: '1100', debit: Math.abs(totalBilled), credit: 0, desc: `Premium Receivable — ${evt.parties.insured_name} (${evt.invoice_number || evt.policy.policy_number})`, dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
+      mgaLines.push({ acct: '2200', debit: 0, credit: Math.abs(netPremium), desc: `Net Carrier Settlement Payable — ${evt.parties.carrier_name}`, dims: { cost_center: '00 - Corporate' } });
       if (taxAndFees !== 0) {
-        mgaLines.push({ acct: '2300', debit: 0, credit: Math.abs(taxAndFees), desc: 'Premium Taxes & Fees Payable (TX)', dims: { state: 'TX' } });
+        mgaLines.push({ acct: '2300', debit: 0, credit: Math.abs(taxAndFees), desc: 'Surplus Lines Taxes & Regulatory Fees (TX)', dims: { state: 'TX' } });
       }
-      mgaLines.push({ acct: '4100', debit: 0, credit: Math.abs(commission), desc: 'MGA Comm. & Producer Revenue', dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
+      mgaLines.push({ acct: '4100', debit: 0, credit: Math.abs(commission), desc: 'MGA Override & Producer Commission Revenue', dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
     }
     else if (evt.event_type === 'PAYMENT_RECEIVED') {
       const dueAmt = totalBilled;
       if (paid > dueAmt) {
         const over = paid - dueAmt;
-        mgaLines.push({ acct: '1001', debit: paid, credit: 0, desc: 'Premium Receipt', dims: { location: 'HQ' } });
-        mgaLines.push({ acct: '1100', debit: 0, credit: dueAmt, desc: 'Clear premium AR', dims: { mga: evt.parties.mga_name } });
-        mgaLines.push({ acct: '2100', debit: 0, credit: over, desc: 'Unapplied Customer Credit', dims: {} });
+        mgaLines.push({ acct: '1001', debit: paid, credit: 0, desc: 'Customer Premium Receipt', dims: { location: 'HQ' } });
+        mgaLines.push({ acct: '1100', debit: 0, credit: dueAmt, desc: 'Clear Premium Receivable', dims: { mga: evt.parties.mga_name } });
+        mgaLines.push({ acct: '2100', debit: 0, credit: over, desc: 'Unapplied Cash / Customer Credit', dims: {} });
       } else {
-        mgaLines.push({ acct: '1001', debit: paid, credit: 0, desc: 'Premium Receipt', dims: { location: 'HQ' } });
-        mgaLines.push({ acct: '1100', debit: 0, credit: paid, desc: 'Partial clear premium AR', dims: { mga: evt.parties.mga_name } });
+        mgaLines.push({ acct: '1001', debit: paid, credit: 0, desc: 'Customer Premium Receipt', dims: { location: 'HQ' } });
+        mgaLines.push({ acct: '1100', debit: 0, credit: paid, desc: 'Partial Clear Premium Receivable', dims: { mga: evt.parties.mga_name } });
       }
     }
     else if (evt.event_type === 'COMMISSION_CALCULATED') {
-      mgaLines.push({ acct: '6100', debit: Math.abs(commission), credit: 0, desc: `Broker/Producer Commission Expense - ${evt.parties.producer}`, dims: { broker: evt.parties.producer } });
-      mgaLines.push({ acct: '2100', debit: 0, credit: Math.abs(commission), desc: `Broker Commission Payable`, dims: { broker: evt.parties.producer } });
+      mgaLines.push({ acct: '6100', debit: Math.abs(commission), credit: 0, desc: `Producer Commission Expense — ${evt.parties.producer}`, dims: { broker: evt.parties.producer } });
+      mgaLines.push({ acct: '2100', debit: 0, credit: Math.abs(commission), desc: `Producer Commission Payable`, dims: { broker: evt.parties.producer } });
     }
     else if (evt.event_type === 'CARRIER_PAYMENT_COMPLETED') {
-      mgaLines.push({ acct: '2200', debit: Math.abs(netPremium), credit: 0, desc: 'Clear Carrier Payable', dims: {} });
-      mgaLines.push({ acct: '1001', debit: 0, credit: Math.abs(netPremium), desc: 'Disburse Settle Payment to Carrier', dims: {} });
+      mgaLines.push({ acct: '2200', debit: Math.abs(netPremium), credit: 0, desc: 'Clear Carrier Settlement Payable', dims: {} });
+      mgaLines.push({ acct: '1001', debit: 0, credit: Math.abs(netPremium), desc: 'Disburse Net Carrier Settlement', dims: {} });
     }
     else if (evt.event_type === 'POLICY_CANCELLED') {
       mgaLines.push({ acct: '2200', debit: Math.abs(netPremium), credit: 0, desc: 'Reverse Net Carrier Payable' });
-      mgaLines.push({ acct: '4100', debit: Math.abs(commission), credit: 0, desc: 'Reverse Comm. Revenue' });
+      mgaLines.push({ acct: '4100', debit: Math.abs(commission), credit: 0, desc: 'Reverse Commission Revenue' });
       if (taxAndFees !== 0) {
         mgaLines.push({ acct: '2300', debit: Math.abs(taxAndFees), credit: 0, desc: 'Reverse Tax & Fees Payable' });
       }
-      mgaLines.push({ acct: '1100', debit: 0, credit: Math.abs(totalBilled), desc: 'Reverse Premium AR' });
+      mgaLines.push({ acct: '1100', debit: 0, credit: Math.abs(totalBilled), desc: 'Reverse Premium Receivable' });
     }
 
     // --- 2. Carrier GL lines ---
     const carrierLines = [];
     if (evt.event_type === 'POLICY_BINDING_INVOICED' || evt.event_type === 'PREMIUM_ADJUSTED') {
-      carrierLines.push({ acct: '1100', debit: Math.abs(netPremium), credit: 0, desc: `Receivable from MGA ${evt.parties.mga_name}`, dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
-      carrierLines.push({ acct: '6100', debit: Math.abs(commission), credit: 0, desc: 'MGA Commission Expense', dims: { lob: evt.policy.lob } });
+      carrierLines.push({ acct: '1100', debit: Math.abs(netPremium), credit: 0, desc: `Direct Receivable from MGA ${evt.parties.mga_name}`, dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
+      carrierLines.push({ acct: '6100', debit: Math.abs(commission), credit: 0, desc: 'MGA Commission Override Expense', dims: { lob: evt.policy.lob } });
       carrierLines.push({ acct: '4100', debit: 0, credit: Math.abs(premium), desc: 'Gross Written Premium Revenue', dims: { mga: evt.parties.mga_name, lob: evt.policy.lob } });
     }
     else if (evt.event_type === 'CARRIER_PAYMENT_COMPLETED') {
-      carrierLines.push({ acct: '1001', debit: Math.abs(netPremium), credit: 0, desc: 'Settlement cash received from MGA', dims: { location: 'HQ' } });
-      carrierLines.push({ acct: '1100', debit: 0, credit: Math.abs(netPremium), desc: 'Clear MGA Receivable', dims: { mga: evt.parties.mga_name } });
+      carrierLines.push({ acct: '1001', debit: Math.abs(netPremium), credit: 0, desc: 'Settlement Cash Received from MGA', dims: { location: 'HQ' } });
+      carrierLines.push({ acct: '1100', debit: 0, credit: Math.abs(netPremium), desc: 'Clear MGA Settlement Receivable', dims: { mga: evt.parties.mga_name } });
     }
     else if (evt.event_type === 'POLICY_CANCELLED') {
-      carrierLines.push({ acct: '4100', debit: Math.abs(premium), credit: 0, desc: 'Reverse Premium Revenue' });
-      carrierLines.push({ acct: '6100', debit: 0, credit: Math.abs(commission), desc: 'Reverse MGA Comm Expense' });
-      carrierLines.push({ acct: '1100', debit: 0, credit: Math.abs(netPremium), desc: 'Reverse MGA Receivable' });
+      carrierLines.push({ acct: '4100', debit: Math.abs(premium), credit: 0, desc: 'Reverse Gross Premium Revenue' });
+      carrierLines.push({ acct: '6100', debit: 0, credit: Math.abs(commission), desc: 'Reverse MGA Commission Expense' });
+      carrierLines.push({ acct: '1100', debit: 0, credit: Math.abs(netPremium), desc: 'Reverse MGA Settlement Receivable' });
     }
 
     // --- 3. Save & Post both entries ---
@@ -763,7 +787,7 @@
       const mgaJE = createJournalEntry({
         entityId: 'ENT-MINE',
         date: evt.dates.transaction_date,
-        description: `${evt.event_type} - Policy ${evt.policy.policy_number} (Invoice ${evt.invoice_number || 'INV-V8NHT-1'})`,
+        description: getCleanJeSentence(evt.event_type, evt.policy.policy_number, evt.parties.insured_name, evt.invoice_number),
         source: 'INSURANCE',
         lines: mgaLines
       });
@@ -780,7 +804,7 @@
       const carrierJE = createJournalEntry({
         entityId: 'ENT-CAR-01',
         date: evt.dates.transaction_date,
-        description: `${evt.event_type} - Policy ${evt.policy.policy_number} (Carrier Ledger)`,
+        description: `Carrier Ledger — ${getCleanJeSentence(evt.event_type, evt.policy.policy_number, evt.parties.insured_name, null)}`,
         source: 'INSURANCE',
         lines: carrierLines
       });
