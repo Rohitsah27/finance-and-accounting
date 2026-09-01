@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Insurance Accounting Simulator — 4-Tier Chain | VeriDex</title>
+  <title>Insurance Accounting Simulator — 3 Billing Models | VeriDex</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/components.js"></script>
   <script src="js/config-engine.js"></script>
@@ -15,6 +15,42 @@
     .sim-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-bottom: 24px; }
     @media(max-width:1024px) { .sim-grid { grid-template-columns: 1fr; } }
     
+    /* Model Selector Pills */
+    .model-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 6px;
+      background: #ffffff;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 10px;
+      width: fit-content;
+    }
+    .model-pill {
+      padding: 8px 18px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--gray-600);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .model-pill.active {
+      background: var(--navy);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(13, 27, 75, 0.25);
+    }
+    .model-pill:hover:not(.active) {
+      background: var(--gray-100);
+      color: var(--gray-900);
+    }
+
     /* 4-Tier Chain Summary Banner */
     .chain-banner {
       display: flex;
@@ -48,7 +84,7 @@
     .sim-step:last-child::after { display: none; }
     .sim-step-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--gray-100); border: 2px solid var(--gray-300); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gray-500); font-size: 12.5px; z-index: 2; transition: all 0.3s ease; }
     .sim-step-label { font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.3px; transition: all 0.3s ease; }
-    .sim-step-desc { font-size: 9.5px; color: var(--gray-400); max-width: 100px; line-height: 1.2; }
+    .sim-step-desc { font-size: 9.5px; color: var(--gray-400); max-width: 110px; line-height: 1.2; }
     
     .sim-step.active .sim-step-icon { background: var(--v-teal-bg); border-color: var(--v-teal); color: var(--v-teal); box-shadow: 0 0 0 3px rgba(15, 110, 99, 0.15); }
     .sim-step.active .sim-step-label { color: var(--navy); }
@@ -82,104 +118,51 @@
   <div class="page-header">
     <div>
       <div class="page-title">Insurance Accounting Flow Simulator</div>
-      <div class="page-subtitle">End-to-end 4-Tier Distribution Value Chain: Insured → Broker → MGA → Carrier</div>
+      <div class="page-subtitle">Interactive 3-Model Distribution Simulator: DBA (Agency Bill) · DBM (Direct to MGA) · DBC (Direct to Carrier)</div>
     </div>
     <div class="page-actions">
       <button class="btn btn-outline" onclick="resetSimulation()">Reset Simulation</button>
-      <button class="btn btn-primary" onclick="generatePracticePolicies()">Practice Setup: Bind 5 Policies ($50k)</button>
+      <button class="btn btn-primary" onclick="generatePracticePolicies()">Setup 5 Policies ($50k)</button>
     </div>
+  </div>
+
+  <!-- Billing Model Selector Tabs -->
+  <div class="model-selector-bar">
+    <button class="model-pill active" id="btn-model-dba" onclick="switchBillingModel('DBA')">
+      <span>🏢</span> <strong>Model 1: DBA</strong> (Agency Bill: Insured ➔ Broker ➔ MGA ➔ Carrier)
+    </button>
+    <button class="model-pill" id="btn-model-dbm" onclick="switchBillingModel('DBM')">
+      <span>📑</span> <strong>Model 2: DBM</strong> (Direct to MGA: Insured ➔ MGA ➔ Carrier)
+    </button>
+    <button class="model-pill" id="btn-model-dbc" onclick="switchBillingModel('DBC')">
+      <span>🏛️</span> <strong>Model 3: DBC</strong> (Direct to Carrier: Insured ➔ Carrier)
+    </button>
   </div>
 
   <!-- 4-Tier Value Chain Header Banner -->
-  <div class="chain-banner">
-    <div class="chain-node">
-      <div class="chain-node-title">1. Policyholder</div>
-      <div class="chain-node-name" id="ban-insured-name">Insureds (CIC / ACME)</div>
-      <div class="chain-node-take">Pays $50,000 Gross</div>
-    </div>
-    <div class="chain-arrow">➔</div>
-    <div class="chain-node">
-      <div class="chain-node-title">2. Retail Producer</div>
-      <div class="chain-node-name" id="ban-broker-name">Links Insurance Agency</div>
-      <div class="chain-node-take">Retains $5,000 (10%)</div>
-    </div>
-    <div class="chain-arrow">➔</div>
-    <div class="chain-node">
-      <div class="chain-node-title">3. Program Manager</div>
-      <div class="chain-node-name" id="ban-mga-name">My Business MGA</div>
-      <div class="chain-node-take">Retains $2,500 (5%)</div>
-    </div>
-    <div class="chain-arrow">➔</div>
-    <div class="chain-node">
-      <div class="chain-node-title">4. Risk Bearer</div>
-      <div class="chain-node-name" id="ban-carrier-name">Southlake Insurance Co.</div>
-      <div class="chain-node-take">Books $50k / Net $42.5k</div>
-    </div>
-  </div>
+  <div class="chain-banner" id="chain-banner-container"></div>
 
-  <!-- 8-Step Complete Stepper -->
-  <div class="sim-stepper">
-    <div class="sim-step" id="step-1">
-      <div class="sim-step-icon">1</div>
-      <div class="sim-step-label">Broker Invoice</div>
-      <div class="sim-step-desc">Invoice Insured $50k</div>
-    </div>
-    <div class="sim-step" id="step-2">
-      <div class="sim-step-icon">2</div>
-      <div class="sim-step-label">Insured Pays</div>
-      <div class="sim-step-desc">Collect $50k Cash</div>
-    </div>
-    <div class="sim-step" id="step-3">
-      <div class="sim-step-icon">3</div>
-      <div class="sim-step-label">Broker Remits</div>
-      <div class="sim-step-desc">Remit $45k Net to MGA</div>
-    </div>
-    <div class="sim-step" id="step-4">
-      <div class="sim-step-icon">4</div>
-      <div class="sim-step-label">MGA Receipts</div>
-      <div class="sim-step-desc">Receive $45k from Broker</div>
-    </div>
-    <div class="sim-step" id="step-5">
-      <div class="sim-step-icon">5</div>
-      <div class="sim-step-label">MGA Remits</div>
-      <div class="sim-step-desc">Remit $42.5k to Carrier</div>
-    </div>
-    <div class="sim-step" id="step-6">
-      <div class="sim-step-icon">6</div>
-      <div class="sim-step-label">Bordereau (BX)</div>
-      <div class="sim-step-desc">Carrier Books Gross/Comm</div>
-    </div>
-    <div class="sim-step" id="step-7">
-      <div class="sim-step-icon">7</div>
-      <div class="sim-step-label">Carrier Wire</div>
-      <div class="sim-step-desc">Match $42.5k Settlement</div>
-    </div>
-    <div class="sim-step" id="step-8">
-      <div class="sim-step-icon">8</div>
-      <div class="sim-step-label">Earn Premium</div>
-      <div class="sim-step-desc">Amortize Monthly</div>
-    </div>
-  </div>
+  <!-- Dynamic Stepper Steps -->
+  <div class="sim-stepper" id="sim-stepper-container"></div>
 
   <div class="sim-grid">
     <!-- Left Column: Active Step Details & Actions -->
     <div>
       <!-- Step 0: Welcome / Setup needed -->
       <div class="form-card active-panel" id="panel-setup" style="display: none;">
-        <div class="card-title">Welcome to the 4-Tier Accounting Simulator</div>
-        <p style="font-size: 13px; color: var(--gray-600); margin: 12px 0 20px; line-height: 1.5;">
-          This simulator executes the complete double-entry accounting lifecycle across all 4 parties in the insurance supply chain:
-          <strong>Insured</strong>, <strong>Broker / Retail Agent</strong>, <strong>MGA</strong>, and <strong>Carrier</strong>.
+        <div class="card-title">Welcome to the Insurance Accounting Simulator</div>
+        <p style="font-size: 13px; color: var(--gray-600); margin: 12px 0 20px; line-height: 1.5;" id="setup-model-desc">
+          This simulator executes the complete double-entry accounting lifecycle across all parties in the insurance supply chain under <strong>DBA</strong>, <strong>DBM</strong>, and <strong>DBC</strong> billing models.
         </p>
         <div style="background: var(--bg); border: 1.5px dashed var(--gray-200); border-radius: 8px; padding: 20px; text-align: center;">
           <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
           <div style="font-weight: 700; color: var(--navy); margin-bottom: 4px;">No Policies Bound Yet</div>
-          <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 16px;">Create policies in the right sidebar or click below to auto-bind 5 practice policies ($50,000 total).</div>
-          <button class="btn btn-primary" onclick="generatePracticePolicies()">Setup 5 Practice Policies</button>
+          <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 16px;">Click below to auto-bind 5 practice policies ($50,000 total) and begin the interactive flow.</div>
+          <button class="btn btn-primary" onclick="generatePracticePolicies()">Setup 5 Practice Policies ($50k)</button>
         </div>
       </div>
 
-      <!-- Step 1-8 Actions -->
+      <!-- Active Step Actions -->
       <div class="form-card active-panel" id="panel-actions" style="display: none;">
         <div class="card-title" id="action-panel-title">Active Step</div>
         <p id="action-panel-desc" style="font-size: 13px; color: var(--gray-600); margin: 8px 0 16px; line-height: 1.4;"></p>
@@ -206,9 +189,7 @@
             <span style="text-align: right;">Debit ($)</span>
             <span style="text-align: right;">Credit ($)</span>
           </div>
-          <div id="ledger-rows-container">
-            <!-- Dynamic JEs -->
-          </div>
+          <div id="ledger-rows-container"></div>
         </div>
 
         <div style="margin-top: 20px; display: flex; gap: 12px;">
@@ -220,10 +201,9 @@
       <div class="form-card active-panel" id="panel-finished" style="display: none;">
         <div style="text-align: center; padding: 24px;">
           <div style="font-size: 40px; margin-bottom: 12px;">🎉</div>
-          <div style="font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 8px;">Complete 4-Tier Flow Simulated!</div>
-          <p style="font-size: 13px; color: var(--gray-600); max-width: 520px; margin: 0 auto 20px; line-height: 1.5;">
-            All 8 steps across Broker, MGA, and Carrier ledgers have balanced cleanly.
-            The Broker recognized $5,000 commission revenue, the MGA recognized $2,500 override revenue, and the Carrier booked $50,000 gross premium with $42,500 net cash settlement!
+          <div style="font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 8px;" id="finished-title">Complete Flow Simulated!</div>
+          <p style="font-size: 13px; color: var(--gray-600); max-width: 520px; margin: 0 auto 20px; line-height: 1.5;" id="finished-desc">
+            All steps across Broker, MGA, and Carrier ledgers have balanced cleanly.
           </p>
           <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="resetSimulation()">Restart Simulation</button>
@@ -248,21 +228,6 @@
             <tbody id="tbl-parties-tbody"></tbody>
           </table>
         </div>
-        
-        <!-- Add Party Trigger -->
-        <details style="margin-top: 10px; font-size:12px;">
-          <summary style="cursor:pointer; color:var(--v-teal); font-weight:600;">+ Create Custom Party</summary>
-          <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; background:var(--gray-50); padding:10px; border-radius:6px;">
-            <input type="text" class="field-input" id="new-party-name" placeholder="Party Name">
-            <select class="field-input" id="new-party-type">
-              <option value="broker">Broker / Retail Agent</option>
-              <option value="mga">MGA / Program Manager</option>
-              <option value="carrier">Insurance Carrier</option>
-              <option value="insured">Insured / Policyholder</option>
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="onCreatePartySubmit()">Add Party</button>
-          </div>
-        </details>
       </div>
 
       <!-- Policy Creator -->
@@ -276,19 +241,6 @@
             <tbody id="tbl-policies-tbody"></tbody>
           </table>
         </div>
-
-        <!-- Add Policy Form -->
-        <details style="margin-top: 10px; font-size:12px;">
-          <summary style="cursor:pointer; color:var(--v-teal); font-weight:600;">+ Add Individual Policy</summary>
-          <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; background:var(--gray-50); padding:10px; border-radius:6px;">
-            <select class="field-input" id="pol-broker-select"></select>
-            <select class="field-input" id="pol-mga-select"></select>
-            <select class="field-input" id="pol-carrier-select"></select>
-            <select class="field-input" id="pol-insured-select"></select>
-            <input type="number" class="field-input" id="pol-premium" placeholder="Premium Amount" value="10000">
-            <button class="btn btn-primary btn-sm" onclick="onCreatePolicySubmit()">Create Policy</button>
-          </div>
-        </details>
       </div>
     </div>
   </div>
@@ -329,7 +281,6 @@
   const SIM_STATE_KEY = 'v_insurance_simulation_state';
   const PARTIES_KEY = 'v_sim_parties';
 
-  // Seed default parties (Carrier, MGA, Broker, Insureds)
   function getParties() {
     let parties = JSON.parse(localStorage.getItem(PARTIES_KEY) || '[]');
     if (!parties.length) {
@@ -338,8 +289,7 @@
         { id: 'PRT-MGA-01', name: 'My Business MGA', type: 'mga', code: 'MYMGA', status: 'active' },
         { id: 'PRT-BRK-01', name: 'Links Insurance Agency', type: 'broker', code: 'LINK', status: 'active' },
         { id: 'PRT-INS-01', name: 'Commercial Insured Corp', type: 'insured', code: 'CIC', status: 'active' },
-        { id: 'PRT-INS-02', name: 'Acme Corporation', type: 'insured', code: 'ACME', status: 'active' },
-        { id: 'PRT-INS-03', name: 'TechFlow LLC', type: 'insured', code: 'TECH', status: 'active' }
+        { id: 'PRT-INS-02', name: 'Acme Corporation', type: 'insured', code: 'ACME', status: 'active' }
       ];
       localStorage.setItem(PARTIES_KEY, JSON.stringify(parties));
     }
@@ -350,16 +300,17 @@
     let state = JSON.parse(localStorage.getItem(SIM_STATE_KEY) || 'null');
     if (!state) {
       state = {
-        step: 0, // 0 = Setup, 1 = Broker Invoice, 2 = Insured Pays, 3 = Broker Remits, 4 = MGA Receives, 5 = MGA Remits, 6 = Bordereau, 7 = Carrier Wire, 8 = Earning
+        model: 'DBA', // 'DBA' | 'DBM' | 'DBC'
+        step: 0,
         carrierId: 'PRT-CAR-01',
         mgaId: 'PRT-MGA-01',
         brokerId: 'PRT-BRK-01',
         policyIds: [],
-        totalPremium: 0,
-        brokerComm: 0,
-        mgaComm: 0,
-        netToMGA: 0,
-        netToCarrier: 0
+        totalPremium: 50000,
+        brokerComm: 5000,
+        mgaComm: 2500,
+        netToMGA: 45000,
+        netToCarrier: 42500
       };
       saveSimState(state);
     }
@@ -370,9 +321,25 @@
     localStorage.setItem(SIM_STATE_KEY, JSON.stringify(state));
   }
 
+  function switchBillingModel(model) {
+    const state = getSimState();
+    state.model = model;
+    state.step = state.policyIds.length ? 1 : 0;
+    saveSimState(state);
+    
+    document.querySelectorAll('.model-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-model-' + model.toLowerCase()).classList.add('active');
+    
+    showToast(`Switched to Model: ${model}`, 'info');
+    initSimulator();
+  }
+
   function resetSimulation() {
-    if (confirm('Are you sure you want to reset the simulation state? This will clear active simulation records.')) {
-      localStorage.removeItem(SIM_STATE_KEY);
+    if (confirm('Reset the active simulation state?')) {
+      const state = getSimState();
+      state.step = 0;
+      state.policyIds = [];
+      saveSimState(state);
       const policies = getPolicies().filter(p => !p.id.startsWith('POL-SIM-'));
       glSave(IO_KEY_POLICIES, policies);
       showToast('Simulation reset successfully.', 'info');
@@ -380,7 +347,6 @@
     }
   }
 
-  // Generate 5 practice policies ($50,000 total)
   function generatePracticePolicies() {
     const state = getSimState();
     const parties = getParties();
@@ -389,11 +355,6 @@
     const mga = parties.find(p => p.type === 'mga') || parties[1];
     const broker = parties.find(p => p.type === 'broker') || parties[2];
     const insureds = parties.filter(p => p.type === 'insured');
-    
-    if (!carrier || !mga || !broker || !insureds.length) {
-      showToast('Ensure at least one Carrier, MGA, Broker, and Insured exist first.', 'error');
-      return;
-    }
 
     const currentPolicies = getPolicies();
     const lobs = ['Property', 'General Liability', 'Commercial Property', 'Inland Marine', 'Liability'];
@@ -421,9 +382,7 @@
         lob: lobs[i],
         premium: premium,
         effectiveDate: new Date().toISOString().slice(0, 10),
-        status: 'bound',
-        brokerCommPct: 10,
-        mgaCommPct: 5
+        status: 'bound'
       };
       currentPolicies.unshift(policy);
       generatedIds.push(policyId);
@@ -443,242 +402,283 @@
     state.netToCarrier = state.netToMGA - state.mgaComm;
     saveSimState(state);
 
-    showToast('Successfully bound 5 practice policies (Total Premium: $' + total.toLocaleString() + ').', 'success');
+    showToast(`Bound 5 practice policies ($${total.toLocaleString()}) under Model ${state.model}.`, 'success');
     initSimulator();
   }
 
-  // Helper to add custom party
-  function addParty(name, type) {
-    const parties = getParties();
-    const typeCodes = { carrier: 'CAR', mga: 'MGA', broker: 'BRK', insured: 'INS' };
-    const prefix = typeCodes[type] || 'PRT';
-    const code = name.slice(0, 4).toUpperCase();
-    const id = `PRT-${prefix}-${Date.now()}`;
-    const newParty = { id, name, type, code, status: 'active' };
-    parties.push(newParty);
-    localStorage.setItem(PARTIES_KEY, JSON.stringify(parties));
-    return newParty;
-  }
-
-  // Create custom party
-  function onCreatePartySubmit() {
-    const name = document.getElementById('new-party-name').value.trim();
-    const type = document.getElementById('new-party-type').value;
-    if (!name) {
-      showToast('Party Name is required.', 'warning');
-      return;
-    }
-    const p = addParty(name, type);
-    document.getElementById('new-party-name').value = '';
-    showToast(`Party "${p.name}" added successfully.`, 'success');
-    initSimulator();
-  }
-
-  // Create custom policy
-  function onCreatePolicySubmit() {
-    const brokerId = document.getElementById('pol-broker-select').value;
-    const mgaId = document.getElementById('pol-mga-select').value;
-    const carrierId = document.getElementById('pol-carrier-select').value;
-    const insuredId = document.getElementById('pol-insured-select').value;
-    const premium = parseFloat(document.getElementById('pol-premium').value) || 0;
-
-    if (premium <= 0) {
-      showToast('Enter a valid premium amount.', 'warning');
-      return;
-    }
-
-    const parties = getParties();
-    const broker = parties.find(p => p.id === brokerId) || { id: brokerId, name: 'Broker' };
-    const mga = parties.find(p => p.id === mgaId) || { id: mgaId, name: 'MGA' };
-    const carrier = parties.find(p => p.id === carrierId) || { id: carrierId, name: 'Carrier' };
-    const insured = parties.find(p => p.id === insuredId) || { id: insuredId, name: 'Insured' };
-
-    const currentPolicies = getPolicies();
-    const policyId = 'POL-SIM-' + Date.now();
-    const policy = {
-      id: policyId,
-      policyNumber: 'POL-SIM-' + new Date().getFullYear() + '-' + String(currentPolicies.length + 1).padStart(5, '0'),
-      insured: insured.name,
-      brokerId: broker.id,
-      brokerName: broker.name,
-      mgaId: mga.id,
-      mgaName: mga.name,
-      carrierId: carrier.id,
-      carrierName: carrier.name,
-      state: 'TX',
-      lob: 'General Liability',
-      premium: premium,
-      effectiveDate: new Date().toISOString().slice(0, 10),
-      status: 'bound',
-      brokerCommPct: 10,
-      mgaCommPct: 5
-    };
-
-    currentPolicies.unshift(policy);
-    glSave(IO_KEY_POLICIES, currentPolicies);
-
-    const state = getSimState();
-    if (state.step === 0) {
-      state.step = 1;
-      state.carrierId = carrier.id;
-      state.mgaId = mga.id;
-      state.brokerId = broker.id;
-      state.policyIds = [policyId];
-      state.totalPremium = premium;
-    } else {
-      state.policyIds.push(policyId);
-      state.totalPremium += premium;
-    }
-    state.brokerComm = Math.round(state.totalPremium * 0.10);
-    state.mgaComm = Math.round(state.totalPremium * 0.05);
-    state.netToMGA = state.totalPremium - state.brokerComm;
-    state.netToCarrier = state.netToMGA - state.mgaComm;
-    saveSimState(state);
-
-    showToast(`Policy ${policy.policyNumber} bound successfully.`, 'success');
-    initSimulator();
-  }
-
-  // 8 Double Entry Definitions (Matches README.md exactly)
-  function getDoubleEntryForStep(step, totalGross, brokerName, mgaName, carrierName) {
+  // Double Entry Definitions for DBA, DBM, and DBC
+  function getDoubleEntry(model, step, totalGross, brokerName, mgaName, carrierName) {
     const brokerComm = Math.round(totalGross * 0.10);
     const mgaComm = Math.round(totalGross * 0.05);
+    const totalComm = brokerComm + mgaComm;
     const netToMGA = totalGross - brokerComm;
     const netToCarrier = netToMGA - mgaComm;
     const monthlyAmort = parseFloat((totalGross / 12).toFixed(2));
 
-    switch (step) {
-      case 1: // Broker Invoices Insured
-        return {
-          title: `Broker Books: Invoice Insured (${brokerName})`,
-          targetEntity: 'ENT-AGY-01',
-          roleLabel: 'Agency Principal / Broker (Priya Menon)',
-          lines: [
-            { acct: '1100', name: 'Premium Receivable — Insured', debit: totalGross, credit: 0, desc: `Gross Premium Invoiced to Insured` },
-            { acct: '2200', name: 'Premium Payable — MGA', debit: 0, credit: netToMGA, desc: `Net Premium owed to ${mgaName}` },
-            { acct: '6100', name: 'Commission Revenue (Broker 10%)', debit: 0, credit: brokerComm, desc: `10% Retail Agency Commission` }
-          ]
-        };
-      case 2: // Insured Pays Broker
-        return {
-          title: `Broker Books: Cash Premium Receipt from Insured`,
-          targetEntity: 'ENT-AGY-01',
-          roleLabel: 'Agency Principal / Broker (Priya Menon)',
-          lines: [
-            { acct: '1001', name: 'Cash / Bank (Broker Premium Trust)', debit: totalGross, credit: 0, desc: `Cash receipt from Insured` },
-            { acct: '1100', name: 'Premium Receivable — Insured', debit: 0, credit: totalGross, desc: `Clear Insured Receivable balance` }
-          ]
-        };
-      case 3: // Broker Remits Net Premium to MGA
-        return {
-          title: `Broker Books: Net Premium Remittance to MGA (${mgaName})`,
-          targetEntity: 'ENT-AGY-01',
-          roleLabel: 'Agency Principal / Broker (Priya Menon)',
-          lines: [
-            { acct: '2200', name: 'Premium Payable — MGA', debit: netToMGA, credit: 0, desc: `Clear Payable to ${mgaName}` },
-            { acct: '1001', name: 'Cash / Bank (Broker Premium Trust)', debit: 0, credit: netToMGA, desc: `Wire transfer Net Premium to MGA` }
-          ]
-        };
-      case 4: // MGA Receives Net Premium from Broker
-        return {
-          title: `MGA Books: Receive Net Premium from Broker (${brokerName})`,
-          targetEntity: 'ENT-MINE',
-          roleLabel: 'MGA Operations Manager (Diego Alvarez)',
-          lines: [
-            { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: netToMGA, credit: 0, desc: `Net Premium Wire received from ${brokerName}` },
-            { acct: '2200', name: 'Premium Payable — Carrier', debit: 0, credit: netToCarrier, desc: `Net-Net Premium owed to ${carrierName}` },
-            { acct: '6100', name: 'Commission Revenue (MGA 5% Override)', debit: 0, credit: mgaComm, desc: `5% MGA Underwriting Commission` }
-          ]
-        };
-      case 5: // MGA Remits Net-Net Premium to Carrier
-        return {
-          title: `MGA Books: Net-Net Premium Remittance to Carrier (${carrierName})`,
-          targetEntity: 'ENT-MINE',
-          roleLabel: 'MGA Operations Manager (Diego Alvarez)',
-          lines: [
-            { acct: '2200', name: 'Premium Payable — Carrier', debit: netToCarrier, credit: 0, desc: `Clear Payable to ${carrierName}` },
-            { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: 0, credit: netToCarrier, desc: `Wire transfer Net-Net funds to Carrier` }
-          ]
-        };
-      case 6: // Carrier Ingests Monthly Bordereau (BX Report)
-        return {
-          title: `Carrier Books: Ingest Monthly Bordereau from MGA (${mgaName})`,
-          targetEntity: 'ENT-CAR-01',
-          roleLabel: 'Carrier Controller (Lena Novak)',
-          lines: [
-            { acct: '1100', name: 'Premium Receivable — MGA', debit: netToCarrier, credit: 0, desc: `Net-Net Settlement Receivable from ${mgaName}` },
-            { acct: '6100', name: 'Commission Expense — Broker (10%)', debit: brokerComm, credit: 0, desc: `Retail Broker Acquisition Expense` },
-            { acct: '6101', name: 'Commission Expense — MGA Override (5%)', debit: mgaComm, credit: 0, desc: `MGA Program Administration Expense` },
-            { acct: '2100', name: 'Unearned Premium Liability', debit: 0, credit: totalGross, desc: `Gross Written Premium Reserve` }
-          ]
-        };
-      case 7: // Carrier Reconciles MGA Cash Wire Settlement
-        return {
-          title: `Carrier Books: Reconcile MGA Cash Wire Settlement`,
-          targetEntity: 'ENT-CAR-01',
-          roleLabel: 'Carrier Controller (Lena Novak)',
-          lines: [
-            { acct: '1001', name: 'Cash / Bank (Operating/Trust)', debit: netToCarrier, credit: 0, desc: `Net-Net Settlement Wire received from ${mgaName}` },
-            { acct: '1100', name: 'Premium Receivable — MGA', debit: 0, credit: netToCarrier, desc: `Clear MGA Premium Receivable balance` }
-          ]
-        };
-      case 8: // Carrier Monthly Premium Earning (Amortization)
-        return {
-          title: `Carrier Books: Monthly Premium Earning (1/12th Amortization)`,
-          targetEntity: 'ENT-CAR-01',
-          roleLabel: 'Carrier Controller (Lena Novak)',
-          lines: [
-            { acct: '2100', name: 'Unearned Premium Liability', debit: monthlyAmort, credit: 0, desc: `Release 1/12th Unearned Premium Reserve` },
-            { acct: '4100', name: 'Net Earned Premium Revenue', debit: 0, credit: monthlyAmort, desc: `Recognize 1 Month Earned Premium Revenue` }
-          ]
-        };
-      default:
-        return { title: 'No Entry', targetEntity: 'ENT-MINE', roleLabel: '', lines: [] };
+    if (model === 'DBA') {
+      // 8 Steps
+      switch (step) {
+        case 1:
+          return {
+            title: `Broker Books: Invoice Insured (${brokerName})`,
+            targetEntity: 'ENT-AGY-01',
+            roleLabel: 'Agency Principal / Broker',
+            desc: `The Broker invoices Insured for $${totalGross.toLocaleString()} Gross Premium, sets up a $${netToMGA.toLocaleString()} payable to MGA, and recognizes $${brokerComm.toLocaleString()} (10%) commission revenue.`,
+            lines: [
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: totalGross, credit: 0, desc: `Gross Premium Invoiced` },
+              { acct: '2200', name: 'Premium Payable — MGA', debit: 0, credit: netToMGA, desc: `Net Premium owed to ${mgaName}` },
+              { acct: '6100', name: 'Commission Revenue (Broker 10%)', debit: 0, credit: brokerComm, desc: `10% Retail Commission` }
+            ]
+          };
+        case 2:
+          return {
+            title: `Broker Books: Cash Receipt from Insured`,
+            targetEntity: 'ENT-AGY-01',
+            roleLabel: 'Agency Principal / Broker',
+            desc: `The Insured pays $${totalGross.toLocaleString()} in full to the Broker. Broker records cash in trust and clears the receivable.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (Broker Premium Trust)', debit: totalGross, credit: 0, desc: `Cash receipt from Insured` },
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: 0, credit: totalGross, desc: `Clear Insured Receivable` }
+            ]
+          };
+        case 3:
+          return {
+            title: `Broker Books: Net Remittance to MGA (${mgaName})`,
+            targetEntity: 'ENT-AGY-01',
+            roleLabel: 'Agency Principal / Broker',
+            desc: `Broker deducts 10% ($${brokerComm.toLocaleString()}) commission and remits $${netToMGA.toLocaleString()} Net Premium to MGA.`,
+            lines: [
+              { acct: '2200', name: 'Premium Payable — MGA', debit: netToMGA, credit: 0, desc: `Clear Payable to ${mgaName}` },
+              { acct: '1001', name: 'Cash / Bank (Broker Premium Trust)', debit: 0, credit: netToMGA, desc: `Wire transfer Net Premium to MGA` }
+            ]
+          };
+        case 4:
+          return {
+            title: `MGA Books: Receive Net Premium from Broker (${brokerName})`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA receives $${netToMGA.toLocaleString()} cash from Broker, sets up $${netToCarrier.toLocaleString()} payable to Carrier, and recognizes $${mgaComm.toLocaleString()} (5%) override revenue.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: netToMGA, credit: 0, desc: `Net Premium Wire received` },
+              { acct: '2200', name: 'Premium Payable — Carrier', debit: 0, credit: netToCarrier, desc: `Net-Net Premium owed to ${carrierName}` },
+              { acct: '6100', name: 'Commission Revenue (MGA 5% Override)', debit: 0, credit: mgaComm, desc: `5% MGA Commission Revenue` }
+            ]
+          };
+        case 5:
+          return {
+            title: `MGA Books: Net-Net Remittance to Carrier (${carrierName})`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA disburses $${netToCarrier.toLocaleString()} Net-Net funds to Carrier, clearing MGA's payable.`,
+            lines: [
+              { acct: '2200', name: 'Premium Payable — Carrier', debit: netToCarrier, credit: 0, desc: `Clear Payable to ${carrierName}` },
+              { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: 0, credit: netToCarrier, desc: `Wire Net-Net funds to Carrier` }
+            ]
+          };
+        case 6:
+          return {
+            title: `Carrier Books: Ingest Monthly Bordereau from MGA (${mgaName})`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Carrier books $${totalGross.toLocaleString()} Gross Unearned Premium, recognizes $${brokerComm.toLocaleString()} Broker & $${mgaComm.toLocaleString()} MGA acquisition expenses, and sets up $${netToCarrier.toLocaleString()} receivable.`,
+            lines: [
+              { acct: '1100', name: 'Premium Receivable — MGA', debit: netToCarrier, credit: 0, desc: `Net-Net Settlement Receivable` },
+              { acct: '6100', name: 'Commission Expense — Broker (10%)', debit: brokerComm, credit: 0, desc: `Retail Broker Acquisition Cost` },
+              { acct: '6101', name: 'Commission Expense — MGA Override (5%)', debit: mgaComm, credit: 0, desc: `MGA Program Administration Cost` },
+              { acct: '2100', name: 'Unearned Premium Reserve', debit: 0, credit: totalGross, desc: `Gross Written Premium Reserve` }
+            ]
+          };
+        case 7:
+          return {
+            title: `Carrier Books: Reconcile MGA Cash Settlement Wire ($${netToCarrier.toLocaleString()})`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Carrier receives and matches $${netToCarrier.toLocaleString()} wire from MGA, debiting Cash and clearing the MGA Receivable.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (Operating/Trust)', debit: netToCarrier, credit: 0, desc: `Net-Net Settlement Wire received` },
+              { acct: '1100', name: 'Premium Receivable — MGA', debit: 0, credit: netToCarrier, desc: `Clear MGA Receivable balance` }
+            ]
+          };
+        case 8:
+          return {
+            title: `Carrier Books: Monthly Premium Amortization (1/12th)`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `At month-end, Carrier amortizes 1/12th ($${monthlyAmort.toLocaleString()}) from Unearned Premium Liability into Net Earned Premium Revenue.`,
+            lines: [
+              { acct: '2100', name: 'Unearned Premium Reserve', debit: monthlyAmort, credit: 0, desc: `Release 1/12th Unearned Reserve` },
+              { acct: '4100', name: 'Net Earned Premium Revenue', debit: 0, credit: monthlyAmort, desc: `Recognize 1 Month Earned Premium` }
+            ]
+          };
+      }
+    } else if (model === 'DBM') {
+      // 5 Steps for Direct Bill to MGA
+      switch (step) {
+        case 1:
+          return {
+            title: `MGA Books: Direct Invoice Insured ($${totalGross.toLocaleString()} Gross)`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA directly invoices Insured for $${totalGross.toLocaleString()}, sets up $${netToCarrier.toLocaleString()} payable to Carrier, $${brokerComm.toLocaleString()} commission payable to Broker, and recognizes $${mgaComm.toLocaleString()} override revenue.`,
+            lines: [
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: totalGross, credit: 0, desc: `Direct Invoiced to Insured` },
+              { acct: '2200', name: 'Premium Payable — Carrier', debit: 0, credit: netToCarrier, desc: `Net-Net Settlement owed to Carrier` },
+              { acct: '2100', name: 'Commission Payable — Broker', debit: 0, credit: brokerComm, desc: `Commission owed to ${brokerName}` },
+              { acct: '6100', name: 'Commission Revenue — MGA Override', debit: 0, credit: mgaComm, desc: `5% MGA Override Revenue` }
+            ]
+          };
+        case 2:
+          return {
+            title: `MGA Books: Receive Gross Premium Directly from Insured`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `Insured pays $${totalGross.toLocaleString()} directly into MGA Premium Trust, clearing Insured Receivable.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: totalGross, credit: 0, desc: `Direct payment from Insured` },
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: 0, credit: totalGross, desc: `Clear Insured Receivable` }
+            ]
+          };
+        case 3:
+          return {
+            title: `MGA Books: Remit Commission Payout to Broker ($${brokerComm.toLocaleString()})`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA disburses $${brokerComm.toLocaleString()} (10%) retail commission to Broker (${brokerName}), clearing Commission Payable.`,
+            lines: [
+              { acct: '2100', name: 'Commission Payable — Broker', debit: brokerComm, credit: 0, desc: `Clear Payable to ${brokerName}` },
+              { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: 0, credit: brokerComm, desc: `Commission Remittance Wire` }
+            ]
+          };
+        case 4:
+          return {
+            title: `MGA Books: Remit Net-Net Settlement to Carrier ($${netToCarrier.toLocaleString()})`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA disburses $${netToCarrier.toLocaleString()} net-net settlement wire to Carrier (${carrierName}), clearing Carrier Payable.`,
+            lines: [
+              { acct: '2200', name: 'Premium Payable — Carrier', debit: netToCarrier, credit: 0, desc: `Clear Carrier Settlement Payable` },
+              { acct: '1001', name: 'Cash / Bank (MGA Premium Trust)', debit: 0, credit: netToCarrier, desc: `Net-Net Wire to Carrier` }
+            ]
+          };
+        case 5:
+          return {
+            title: `Carrier Books: Ingest Bordereau & Reconcile MGA Wire Settlement`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Carrier books $${totalGross.toLocaleString()} Gross Unearned Premium, $${brokerComm.toLocaleString()} Broker Exp, $${mgaComm.toLocaleString()} MGA Exp, and receives $${netToCarrier.toLocaleString()} cash wire.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (Carrier Operating)', debit: netToCarrier, credit: 0, desc: `Net-Net Cash Settlement Wire` },
+              { acct: '6100', name: 'Commission Expense — Broker', debit: brokerComm, credit: 0, desc: `Broker Acquisition Expense` },
+              { acct: '6101', name: 'Commission Expense — MGA Override', debit: mgaComm, credit: 0, desc: `MGA Administration Expense` },
+              { acct: '2100', name: 'Unearned Premium Reserve', debit: 0, credit: totalGross, desc: `Gross Written Premium Reserve` }
+            ]
+          };
+      }
+    } else if (model === 'DBC') {
+      // 4 Steps for Direct Bill to Carrier
+      switch (step) {
+        case 1:
+          return {
+            title: `Carrier Books: Direct Invoice Insured ($${totalGross.toLocaleString()} Gross)`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Carrier directly invoices Insured for $${totalGross.toLocaleString()} and establishes the Gross Unearned Premium Reserve.`,
+            lines: [
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: totalGross, credit: 0, desc: `Gross Premium Direct Invoiced` },
+              { acct: '2100', name: 'Unearned Premium Reserve', debit: 0, credit: totalGross, desc: `Unearned Written Premium Reserve` }
+            ]
+          };
+        case 2:
+          return {
+            title: `Carrier Books: Receive Gross Cash Payment from Insured`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Insured pays $${totalGross.toLocaleString()} directly to Carrier, debiting Cash and clearing Insured Receivable.`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (Carrier Operating)', debit: totalGross, credit: 0, desc: `Direct Premium Receipt` },
+              { acct: '1100', name: 'Premium Receivable — Insured', debit: 0, credit: totalGross, desc: `Clear Insured Receivable` }
+            ]
+          };
+        case 3:
+          return {
+            title: `Carrier Books: Disburse Combined Commission Remittance ($${totalComm.toLocaleString()})`,
+            targetEntity: 'ENT-CAR-01',
+            roleLabel: 'Carrier Controller',
+            desc: `Carrier recognizes $${brokerComm.toLocaleString()} Broker & $${mgaComm.toLocaleString()} MGA commission expenses and disburses $${totalComm.toLocaleString()} wire to MGA.`,
+            lines: [
+              { acct: '6100', name: 'Commission Expense — Broker (10%)', debit: brokerComm, credit: 0, desc: `Retail Broker Acquisition Expense` },
+              { acct: '6101', name: 'Commission Expense — MGA Override (5%)', debit: mgaComm, credit: 0, desc: `MGA Program Administration Expense` },
+              { acct: '1001', name: 'Cash / Bank (Carrier Operating)', debit: 0, credit: totalComm, desc: `Commission Remittance Wire Payout` }
+            ]
+          };
+        case 4:
+          return {
+            title: `MGA Books: Receive Commission Wire & Disburse Broker Share`,
+            targetEntity: 'ENT-MINE',
+            roleLabel: 'MGA Operations Manager',
+            desc: `MGA receives $${totalComm.toLocaleString()} from Carrier, retains $${mgaComm.toLocaleString()} override revenue, and remits $${brokerComm.toLocaleString()} to Broker (${brokerName}).`,
+            lines: [
+              { acct: '1001', name: 'Cash / Bank (MGA Operating)', debit: totalComm, credit: 0, desc: `Commission Wire received from Carrier` },
+              { acct: '6100', name: 'Commission Revenue — MGA Override', debit: 0, credit: mgaComm, desc: `5% MGA Override Revenue` },
+              { acct: '2150', name: 'Commission Payable — Broker', debit: 0, credit: brokerComm, desc: `Retail Commission owed to Broker` }
+            ]
+          };
+      }
     }
+
+    return { title: 'No Entry', targetEntity: 'ENT-MINE', roleLabel: '', desc: '', lines: [] };
   }
 
-  // Switch role action click
+  function getMaxSteps(model) {
+    if (model === 'DBA') return 8;
+    if (model === 'DBM') return 5;
+    if (model === 'DBC') return 4;
+    return 8;
+  }
+
   function onSwitchRoleClick() {
     const state = getSimState();
     const parties = getParties();
     const carrier = parties.find(p => p.id === state.carrierId) || { name: 'Carrier' };
     const mga = parties.find(p => p.id === state.mgaId) || { name: 'MGA' };
     const broker = parties.find(p => p.id === state.brokerId) || { name: 'Broker' };
-    const stepConfig = getDoubleEntryForStep(state.step, state.totalPremium, broker.name, mga.name, carrier.name);
-    switchActiveEntity(stepConfig.targetEntity);
+    const entry = getDoubleEntry(state.model, state.step, state.totalPremium, broker.name, mga.name, carrier.name);
+    switchActiveEntity(entry.targetEntity);
   }
 
-  // Check if current role context matches active step requirement
-  function checkContextMatch(step) {
+  function checkContextMatch(model, step) {
     const active = getActiveEntity();
-    if (step >= 1 && step <= 3) {
-      return active.id === 'ENT-AGY-01' || active.businessType === 'agency' || active.businessType === 'broker';
-    } else if (step === 4 || step === 5) {
-      return active.id === 'ENT-MINE' || active.businessType === 'mga';
-    } else if (step >= 6 && step <= 8) {
-      return active.id === 'ENT-CAR-01' || active.businessType === 'carrier';
+    if (model === 'DBA') {
+      if (step >= 1 && step <= 3) return active.id === 'ENT-AGY-01' || active.businessType === 'agency' || active.businessType === 'broker';
+      if (step === 4 || step === 5) return active.id === 'ENT-MINE' || active.businessType === 'mga';
+      if (step >= 6 && step <= 8) return active.id === 'ENT-CAR-01' || active.businessType === 'carrier';
+    } else if (model === 'DBM') {
+      if (step >= 1 && step <= 4) return active.id === 'ENT-MINE' || active.businessType === 'mga';
+      if (step === 5) return active.id === 'ENT-CAR-01' || active.businessType === 'carrier';
+    } else if (model === 'DBC') {
+      if (step >= 1 && step <= 3) return active.id === 'ENT-CAR-01' || active.businessType === 'carrier';
+      if (step === 4) return active.id === 'ENT-MINE' || active.businessType === 'mga';
     }
     return true;
   }
 
-  // Execute simulation step
   function executeStep(bypassContext = false) {
     const state = getSimState();
     const step = state.step;
+    const model = state.model;
     const parties = getParties();
 
     const carrier = parties.find(p => p.id === state.carrierId) || { name: 'Southlake Insurance Co.' };
     const mga = parties.find(p => p.id === state.mgaId) || { name: 'My Business MGA' };
     const broker = parties.find(p => p.id === state.brokerId) || { name: 'Links Insurance Agency' };
 
-    if (!bypassContext && !checkContextMatch(step)) {
+    if (!bypassContext && !checkContextMatch(model, step)) {
       showToast('Role context mismatch. Please switch role or click "Auto-Execute Step".', 'warning');
       return;
     }
 
-    const doubleEntry = getDoubleEntryForStep(step, state.totalPremium, broker.name, mga.name, carrier.name);
+    const doubleEntry = getDoubleEntry(model, step, state.totalPremium, broker.name, mga.name, carrier.name);
 
-    // Post real Journal Entry
     const entryData = {
       date: new Date().toISOString().slice(0, 10),
       description: doubleEntry.title,
@@ -692,50 +692,154 @@
       }))
     };
 
-    // Store globally in GL engine
     const je = createJournalEntry(entryData);
     submitJournalEntry(je.id);
-    approveJournalEntry(je.id); // Auto-approve simulation JEs for immediate balance shifts
+    approveJournalEntry(je.id);
 
-    // Advance simulator state step
     state.step += 1;
     saveSimState(state);
-
-    // Update policy statuses
-    const policies = getPolicies();
-    let nextStatus = 'BOUND';
-    if (state.step === 2) nextStatus = 'BROKER_INVOICED';
-    else if (state.step === 3) nextStatus = 'INSURED_PAID';
-    else if (state.step === 4) nextStatus = 'BROKER_REMITTED';
-    else if (state.step === 5) nextStatus = 'MGA_RECEIVED';
-    else if (state.step === 6) nextStatus = 'MGA_REMITTED';
-    else if (state.step === 7) nextStatus = 'BORDEREAU_INGESTED';
-    else if (state.step === 8) nextStatus = 'CARRIER_SETTLED';
-    else if (state.step > 8) nextStatus = 'FULLY_EARNED';
-
-    policies.forEach(p => {
-      if (state.policyIds.includes(p.id)) {
-        p.status = nextStatus;
-      }
-    });
-    glSave(IO_KEY_POLICIES, policies);
 
     showToast(`Step ${step} executed: Posted ${je.number} to ${doubleEntry.targetEntity}`, 'success');
     initSimulator();
   }
 
+  function renderStepper(model, currentStep) {
+    const maxSteps = getMaxSteps(model);
+    const container = document.getElementById('sim-stepper-container');
+    
+    const stepLabels = {
+      'DBA': [
+        { label: 'Broker Invoice', desc: 'Invoice Insured' },
+        { label: 'Insured Pays', desc: 'Collect Cash' },
+        { label: 'Broker Remits', desc: 'Remit Net to MGA' },
+        { label: 'MGA Receipts', desc: 'Receive from Broker' },
+        { label: 'MGA Remits', desc: 'Remit to Carrier' },
+        { label: 'Bordereau (BX)', desc: 'Book Gross & Comm' },
+        { label: 'Carrier Wire', desc: 'Match Settlement' },
+        { label: 'Earn Premium', desc: 'Amortize Monthly' },
+      ],
+      'DBM': [
+        { label: 'MGA Invoice', desc: 'Invoice Insured' },
+        { label: 'Insured Pays', desc: 'MGA Collects Cash' },
+        { label: 'Broker Remit', desc: 'Pay Broker Comm' },
+        { label: 'Carrier Remit', desc: 'Pay Carrier Net' },
+        { label: 'Carrier Match', desc: 'Ingest & Reconcile' },
+      ],
+      'DBC': [
+        { label: 'Carrier Invoice', desc: 'Invoice Insured' },
+        { label: 'Insured Pays', desc: 'Carrier Collects Cash' },
+        { label: 'Carrier Disburse', desc: 'Wire Commissions' },
+        { label: 'MGA Distribute', desc: 'Pass Broker Share' },
+      ]
+    };
+
+    const list = stepLabels[model] || stepLabels['DBA'];
+
+    container.innerHTML = list.map((s, idx) => {
+      const stepNum = idx + 1;
+      let cls = 'sim-step';
+      if (stepNum < currentStep) cls = 'sim-step completed';
+      else if (stepNum === currentStep) cls = 'sim-step active';
+
+      return `
+        <div class="${cls}">
+          <div class="sim-step-icon">${stepNum}</div>
+          <div class="sim-step-label">${s.label}</div>
+          <div class="sim-step-desc">${s.desc}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderBanner(model, totalPremium, broker, mga, carrier) {
+    const container = document.getElementById('chain-banner-container');
+    const brokerComm = Math.round(totalPremium * 0.10);
+    const mgaComm = Math.round(totalPremium * 0.05);
+    const netToMGA = totalPremium - brokerComm;
+    const netToCarrier = netToMGA - mgaComm;
+
+    if (model === 'DBA') {
+      container.innerHTML = `
+        <div class="chain-node">
+          <div class="chain-node-title">1. Policyholder</div>
+          <div class="chain-node-name">Insured</div>
+          <div class="chain-node-take">Pays $${totalPremium.toLocaleString()} Gross</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">2. Retail Producer</div>
+          <div class="chain-node-name">${broker.name}</div>
+          <div class="chain-node-take">Retains $${brokerComm.toLocaleString()} (10%)</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">3. Program Manager</div>
+          <div class="chain-node-name">${mga.name}</div>
+          <div class="chain-node-take">Retains $${mgaComm.toLocaleString()} (5%)</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">4. Risk Bearer</div>
+          <div class="chain-node-name">${carrier.name}</div>
+          <div class="chain-node-take">Settles $${netToCarrier.toLocaleString()} Net</div>
+        </div>
+      `;
+    } else if (model === 'DBM') {
+      container.innerHTML = `
+        <div class="chain-node">
+          <div class="chain-node-title">1. Policyholder</div>
+          <div class="chain-node-name">Insured</div>
+          <div class="chain-node-take">Pays $${totalPremium.toLocaleString()} Gross</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">2. Program Manager (MGA)</div>
+          <div class="chain-node-name">${mga.name}</div>
+          <div class="chain-node-take">Collects $${totalPremium.toLocaleString()} / Retains $${mgaComm.toLocaleString()}</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">3. Risk Carrier &amp; Broker</div>
+          <div class="chain-node-name">${carrier.name} + ${broker.name}</div>
+          <div class="chain-node-take">Carrier $${netToCarrier.toLocaleString()} / Broker $${brokerComm.toLocaleString()}</div>
+        </div>
+      `;
+    } else if (model === 'DBC') {
+      container.innerHTML = `
+        <div class="chain-node">
+          <div class="chain-node-title">1. Policyholder</div>
+          <div class="chain-node-name">Insured</div>
+          <div class="chain-node-take">Pays $${totalPremium.toLocaleString()} Gross</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">2. Risk Carrier</div>
+          <div class="chain-node-name">${carrier.name}</div>
+          <div class="chain-node-take">Collects $${totalPremium.toLocaleString()} / Disburses $${(brokerComm+mgaComm).toLocaleString()}</div>
+        </div>
+        <div class="chain-arrow">➔</div>
+        <div class="chain-node">
+          <div class="chain-node-title">3. MGA &amp; Broker</div>
+          <div class="chain-node-name">${mga.name} &amp; ${broker.name}</div>
+          <div class="chain-node-take">MGA $${mgaComm.toLocaleString()} / Broker $${brokerComm.toLocaleString()}</div>
+        </div>
+      `;
+    }
+  }
+
   function initSimulator() {
     const state = getSimState();
+    const model = state.model;
     const step = state.step;
+    const maxSteps = getMaxSteps(model);
     const parties = getParties();
 
     const carrier = parties.find(p => p.id === state.carrierId) || parties[0];
     const mga = parties.find(p => p.id === state.mgaId) || parties[1];
     const broker = parties.find(p => p.id === state.brokerId) || parties[2];
 
-    document.getElementById('ban-broker-name').innerText = broker ? broker.name : 'Links Insurance Agency';
-    document.getElementById('ban-mga-name').innerText = mga ? mga.name : 'My Business MGA';
-    document.getElementById('ban-carrier-name').innerText = carrier ? carrier.name : 'Southlake Insurance Co.';
+    renderBanner(model, state.totalPremium, broker, mga, carrier);
+    renderStepper(model, step);
 
     // Render Parties
     const tblParties = document.getElementById('tbl-parties-tbody');
@@ -747,12 +851,6 @@
       </tr>
     `).join('');
 
-    // Prepopulate selects
-    document.getElementById('pol-broker-select').innerHTML = parties.filter(p => p.type === 'broker').map(p => `<option value="${p.id}">Broker: ${p.name}</option>`).join('');
-    document.getElementById('pol-mga-select').innerHTML = parties.filter(p => p.type === 'mga').map(p => `<option value="${p.id}">MGA: ${p.name}</option>`).join('');
-    document.getElementById('pol-carrier-select').innerHTML = parties.filter(p => p.type === 'carrier').map(p => `<option value="${p.id}">Carrier: ${p.name}</option>`).join('');
-    document.getElementById('pol-insured-select').innerHTML = parties.filter(p => p.type === 'insured').map(p => `<option value="${p.id}">Insured: ${p.name}</option>`).join('');
-
     // Render Policies
     const tblPolicies = document.getElementById('tbl-policies-tbody');
     const currentPolicies = getPolicies().filter(p => p.id.startsWith('POL-SIM-'));
@@ -761,39 +859,29 @@
         <td style="font-weight:600; color:var(--navy);">${p.policyNumber}</td>
         <td>${p.insured}</td>
         <td style="text-align: right; font-weight:600;">$${p.premium.toLocaleString()}</td>
-        <td><span class="badge ${p.status.includes('SETTLED')||p.status.includes('EARNED')?'badge-green':p.status==='BOUND'?'badge-gray':'badge-orange'}">${p.status}</span></td>
+        <td><span class="badge badge-green">${p.status}</span></td>
       </tr>
     `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400);">No simulation policies bound yet.</td></tr>';
 
-    // Highlight Stepper Steps (1 to 8)
-    for (let i = 1; i <= 8; i++) {
-      const el = document.getElementById('step-' + i);
-      if (i < step) {
-        el.className = 'sim-step completed';
-      } else if (i === step) {
-        el.className = 'sim-step active';
-      } else {
-        el.className = 'sim-step';
-      }
-    }
-
-    // Toggle Panels
     document.querySelectorAll('.active-panel').forEach(p => p.style.display = 'none');
     
     if (step === 0) {
       document.getElementById('panel-setup').style.display = 'block';
-    } else if (step > 8) {
+    } else if (step > maxSteps) {
       document.getElementById('panel-finished').style.display = 'block';
+      document.getElementById('finished-title').innerText = `Complete ${model} Flow Simulated!`;
+      document.getElementById('finished-desc').innerText = `All double-entry postings for Model ${model} across Broker, MGA, and Carrier ledgers have balanced cleanly.`;
     } else {
       document.getElementById('panel-actions').style.display = 'block';
       
       const title = document.getElementById('action-panel-title');
       const desc = document.getElementById('action-panel-desc');
       
-      const doubleEntry = getDoubleEntryForStep(step, state.totalPremium, broker.name, mga.name, carrier.name);
+      const doubleEntry = getDoubleEntry(model, step, state.totalPremium, broker.name, mga.name, carrier.name);
+      title.innerText = `Step ${step}: ${doubleEntry.title}`;
+      desc.innerText = doubleEntry.desc;
       document.getElementById('ledger-title-text').innerText = doubleEntry.title;
 
-      // Render JE preview lines
       document.getElementById('ledger-rows-container').innerHTML = doubleEntry.lines.map(l => `
         <div class="ledger-row">
           <span class="${l.credit > 0 ? 'dr-indent' : ''}">
@@ -807,35 +895,8 @@
 
       document.getElementById('warning-role-name').innerText = doubleEntry.roleLabel;
 
-      if (step === 1) {
-        title.innerText = 'Step 1: Broker Invoices the Insured ($50,000 Gross)';
-        desc.innerText = `The Broker (${broker.name}) invoices the Insureds for $${state.totalPremium.toLocaleString()} Gross Written Premium. Broker books a $50k receivable, sets up a $45k payable to MGA (${mga.name}), and recognizes $5,000 (10%) Retail Commission Revenue.`;
-      } else if (step === 2) {
-        title.innerText = 'Step 2: Insured Pays Broker in Cash ($50,000)';
-        desc.innerText = `The Insured pays $${state.totalPremium.toLocaleString()} in full to the Broker. The Broker records cash in the Premium Trust Account (1001) and clears the Insured's Premium Receivable (1100).`;
-      } else if (step === 3) {
-        title.innerText = 'Step 3: Broker Remits Net Premium to MGA ($45,000)';
-        desc.innerText = `The Broker deducts its 10% ($5,000) retail commission and remits the remaining $${state.netToMGA.toLocaleString()} Net Premium to MGA (${mga.name}), clearing the Premium Payable (2200).`;
-      } else if (step === 4) {
-        title.innerText = 'Step 4: MGA Receives Net Premium from Broker ($45,000)';
-        desc.innerText = `The MGA (${mga.name}) receives $${state.netToMGA.toLocaleString()} cash from Broker, sets up a $${state.netToCarrier.toLocaleString()} payable to Carrier (${carrier.name}), and recognizes $${state.mgaComm.toLocaleString()} (5%) MGA Commission Revenue.`;
-      } else if (step === 5) {
-        title.innerText = 'Step 5: MGA Remits Net-Net Settlement to Carrier ($42,500)';
-        desc.innerText = `The MGA disburses $${state.netToCarrier.toLocaleString()} Net-Net funds to Carrier (${carrier.name}), clearing MGA's Premium Payable (2200) to Carrier.`;
-      } else if (step === 6) {
-        title.innerText = 'Step 6: Carrier Ingests Monthly Bordereau (BX Report)';
-        desc.innerText = `The Carrier (${carrier.name}) ingests the monthly Bordereau: books $${state.totalPremium.toLocaleString()} Gross Unearned Premium (2100), recognizes $5,000 Broker Commission Expense (6100), $2,500 MGA Override Expense (6101), and sets up $${state.netToCarrier.toLocaleString()} Premium Receivable from MGA (1100).`;
-      } else if (step === 7) {
-        title.innerText = 'Step 7: Carrier Reconciles MGA Cash Settlement Wire ($42,500)';
-        desc.innerText = `The Carrier receives and matches the $${state.netToCarrier.toLocaleString()} wire from MGA, debiting Cash (1001) and clearing MGA's Premium Receivable (1100).`;
-      } else if (step === 8) {
-        title.innerText = 'Step 8: Carrier Monthly Premium Amortization';
-        desc.innerText = `At month-end, Carrier releases 1/12th ($${(state.totalPremium/12).toFixed(2)}) from Unearned Premium Liability (2100) into Net Earned Premium Revenue (4100).`;
-      }
-
-      // Context Check warning toggle
       const contextWarning = document.getElementById('context-warning-box');
-      if (checkContextMatch(step)) {
+      if (checkContextMatch(model, step)) {
         contextWarning.style.display = 'none';
       } else {
         contextWarning.style.display = 'flex';
@@ -845,7 +906,6 @@
     renderGLPostingsLog();
   }
 
-  // Render dynamic GL Log filter for active role context
   function renderGLPostingsLog() {
     const active = getActiveEntity();
     document.getElementById('lbl-active-gl-entity').innerText = `${active.name} (${getBusinessType(active.businessType).label})`;

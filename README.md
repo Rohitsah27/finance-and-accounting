@@ -1,187 +1,211 @@
 # Veridex Finance System — Insurance Accounting Flow Guide
 
-This document explains the end-to-end accounting, billing, bordereau reporting, and cash settlement flow across the complete 4-tier insurance distribution value chain:
+This document explains the end-to-end accounting, billing, bordereau reporting, and cash settlement flow across the complete insurance distribution value chain under all three industry billing models:
 
-$$\text{Insured (Policyholder)} \longrightarrow \text{Broker (Retail Producer)} \longrightarrow \text{MGA (Managing General Agent)} \longrightarrow \text{Carrier (Risk-Bearing Insurer)}$$
-
-It outlines the interactions between all four stakeholders and details the exact General Ledger (GL) journal entries (JE hits) recorded at each step.
-
----
-
-## 1. Stakeholders
-
-1. **Insured**: The customer buying the insurance policy who is responsible for paying the gross written premium ($10,000).
-2. **Broker / Retail Agent**: The licensed retail producer who sells the policy directly to the Insured, invoices the Insured $10,000, collects the cash, retains a 10% Retail Commission ($1,000), and remits $9,000 Net Premium to the MGA.
-3. **MGA (Managing General Agent)**: The program manager with delegated underwriting authority. The MGA receives $9,000 from the Broker, retains a 5% MGA Commission ($500), remits $8,500 Net-Net Premium to the Carrier, and produces the monthly Bordereau (BX report).
-4. **Carrier**: The risk-bearing insurance underwriting company carrying the policy risk on its balance sheet. The Carrier ingests the Bordereau, books the $10,000 Unearned Premium Liability, recognizes $1,500 total commission expense ($1,000 Broker + $500 MGA), and reconciles the $8,500 net settlement cash.
+1. **DBA (Direct Bill to Agency / Agency Bill)**: $\text{Insured} \longrightarrow \text{Broker / Agency} \longrightarrow \text{MGA} \longrightarrow \text{Carrier}$
+2. **DBM (Direct Bill to MGA)**: $\text{Insured} \longrightarrow \text{MGA} \longrightarrow \text{Carrier}$ *(with Producer Commission Remittances)*
+3. **DBC (Direct Bill to Carrier)**: $\text{Insured} \longrightarrow \text{Carrier}$ *(with MGA & Broker Commission Disbursements)*
 
 ---
 
-## 2. End-to-End Accounting Flow Diagram
+## 1. Stakeholders & Compensation Architecture
 
-The diagram below visualizes the sequencing of invoicing, payments, bordereau reporting, and cash settlements across the 4-tier chain:
+For a standard policy with **$10,000.00 Gross Written Premium**, **10% Broker Commission ($1,000.00)**, and **5% MGA Override Commission ($500.00)**:
+
+1. **Insured (Policyholder)**: The policyholder responsible for paying the **$10,000.00** gross premium.
+2. **Broker / Retail Producer (Agency)**: Sells the policy to the Insured and earns **$1,000.00 (10%)** retail commission.
+3. **MGA (Managing General Agent)**: Program manager with delegated underwriting authority earning **$500.00 (5%)** override commission.
+4. **Carrier (Risk-Bearing Insurer)**: Underwriting company carrying policy risk, booking **$10,000.00** unearned premium reserve, recognizing **$1,500.00** total commission acquisition expense, and settling **$8,500.00** net cash.
+
+---
+
+## 2. The 3 Billing & Settlement Situations
 
 ```text
-Start: Policy Bind
-        ↓
-[Action] Broker Invoices Insured
-Amount: $10,000 Gross Premium
-   ↳ Broker Journal Entry:
-      Dr. Premium Receivable (1100)          $10,000
-      Cr. Premium Payable - MGA (2200)        $9,000
-      Cr. Commission Revenue (6100)           $1,000
-        ↓
-[Action] Insured Pays Broker
-Amount: $10,000 Cash
-   ↳ Broker Journal Entry:
-      Dr. Cash / Bank (1001)                 $10,000
-      Cr. Premium Receivable (1100)          $10,000
-        ↓
-[Action] Broker Pays Net Premium to MGA
-Amount: $9,000 Cash Remittance ($10,000 Gross less $1,000 Broker Comm)
-   ↳ Broker Journal Entry:
-      Dr. Premium Payable - MGA (2200)        $9,000
-      Cr. Cash / Bank (1001)                  $9,000
-   ↳ MGA Journal Entry:
-      Dr. Cash / Bank (1001)                  $9,000
-      Cr. Premium Payable - Carrier (2200)    $8,500
-      Cr. Commission Revenue (6100)             $500
-        ↓
-[Action] MGA Pays Net Premium to Carrier
-Amount: $8,500 Cash Remittance ($9,000 Received less $500 MGA Comm)
-   ↳ MGA Journal Entry:
-      Dr. Premium Payable - Carrier (2200)    $8,500
-      Cr. Cash / Bank (1001)                  $8,500
-        ↓
-[Action] MGA Sends Monthly Bordereau (BX Report) to Carrier
-Summary: Gross $10,000 | Broker Comm $1,000 | MGA Comm $500 | Net Premium $8,500
-        ↓
-[Action] Carrier Receives and Records Bordereau
-   ↳ Carrier Journal Entry:
-      Dr. Premium Receivable - MGA (1100)     $8,500
-      Dr. Commission Expense - Broker (6100)  $1,000
-      Dr. Commission Expense - MGA (6101)       $500
-      Cr. Unearned Premium (2100)            $10,000
-        ↓
-[Action] Carrier Receives and Matches Net Premium Settlement
-Amount: $8,500 Cash matched to outstanding MGA Receivable
-   ↳ Carrier Journal Entry:
-      Dr. Cash / Bank (1001)                  $8,500
-      Cr. Premium Receivable - MGA (1100)     $8,500
-        ↓
-Process Complete
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MODEL 1: DBA (Direct Bill to Agency / Agency Bill)                                               │
+│ Insured pays Broker ($10k) ➔ Broker remits Net to MGA ($9k) ➔ MGA remits Net-Net to Carrier ($8.5k)│
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MODEL 2: DBM (Direct Bill to MGA)                                                                │
+│ Insured pays MGA ($10k) ➔ MGA pays Broker Comm ($1k) ➔ MGA remits Net-Net to Carrier ($8.5k)    │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MODEL 3: DBC (Direct Bill to Carrier)                                                            │
+│ Insured pays Carrier ($10k) ➔ Carrier disburses MGA/Broker Comm ($1.5k) ➔ MGA passes Broker ($1k)│
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Detailed Step-by-Step Flow & Journal Entries
+## 3. Situation 1: DBA (Direct Bill to Agency / Agency Bill)
 
-This example assumes a policy is issued with a **Gross Written Premium of $10,000**, a **10% Broker Commission ($1,000)**, and a **5% MGA Commission ($500)**, resulting in a **Net-Net Premium of $8,500** due to the Carrier.
+### Flow Overview:
+$$\text{Insured} \xrightarrow{\$10,000} \text{Broker} \xrightarrow{\$9,000} \text{MGA} \xrightarrow{\$8,500} \text{Carrier}$$
 
-### Step 1: Broker Issues Invoice to the Insured
-* **Action**: The policy is bound in the system; the Broker generates a gross invoice for the Insured.
-* **Broker's Perspective**: The Broker recognizes a receivable from the Insured, a payable to the MGA, and broker commission revenue.
-* **Journal Entry (Broker Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **1100** | Premium Receivable — Insured | 10,000 | | Customer (Insured) / State / LOB |
-  | **2200** | Premium Payable — MGA | | 9,000 | MGA Partner / Program |
-  | **6100** | Commission Revenue (Broker) | | 1,000 | LOB / Cost Center |
+### Detailed Accounting Steps & Journal Entries:
 
-### Step 2: Insured Pays Gross Premium to Broker
-* **Action**: The Insured pays **$10,000** via bank transfer or check into the Broker's Premium Trust bank account.
-* **Broker's Perspective**: The Broker records cash in trust and clears the Insured's receivable.
-* **Journal Entry (Broker Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **1001** | Cash / Bank (Broker Premium Trust) | 10,000 | | Cost Center |
-  | **1100** | Premium Receivable — Insured | | 10,000 | Customer (Insured) / State / LOB |
+#### Step 1.1: Broker Invoices Insured
+* **Broker Journal Entry**:
+  * **Dr. 1100** Premium Receivable — Insured: **$10,000.00**
+  * **Cr. 2200** Premium Payable — MGA: **$9,000.00**
+  * **Cr. 6100** Commission Revenue (Broker 10%): **$1,000.00**
 
-### Step 3: Broker Remits Net Premium to MGA
-* **Action**: The Broker initiates a bank transfer of **$9,000** ($10,000 gross less $1,000 retained commission) to the MGA.
-* **Broker's Perspective**: The Broker reduces trust cash and extinguishes their liability to the MGA.
-* **Journal Entry (Broker Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **2200** | Premium Payable — MGA | 9,000 | | MGA Partner / Program |
-  | **1001** | Cash / Bank (Broker Premium Trust) | | 9,000 | Cost Center |
+#### Step 1.2: Insured Pays Gross Premium to Broker
+* **Broker Journal Entry**:
+  * **Dr. 1001** Cash / Bank (Broker Premium Trust): **$10,000.00**
+  * **Cr. 1100** Premium Receivable — Insured: **$10,000.00**
 
-### Step 4: MGA Receives Net Premium from Broker
-* **Action**: The MGA receives **$9,000** in their Premium Trust account from the Broker.
-* **MGA's Perspective**: The MGA records the incoming cash, books their liability to the Carrier ($8,500), and recognizes MGA commission revenue ($500).
-* **Journal Entry (MGA Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **1001** | Cash / Bank (MGA Premium Trust) | 9,000 | | Cost Center |
-  | **2200** | Premium Payable — Carrier | | 8,500 | Carrier Partner |
-  | **6100** | Commission Revenue (MGA) | | 500 | LOB / Program / Cost Center |
+#### Step 1.3: Broker Remits Net Premium to MGA ($9,000)
+* **Broker Journal Entry**:
+  * **Dr. 2200** Premium Payable — MGA: **$9,000.00**
+  * **Cr. 1001** Cash / Bank (Broker Premium Trust): **$9,000.00**
+* *Broker Position Closed: Cash +$1,000.00 | Net Revenue +$1,000.00*
 
-### Step 5: MGA Pays Net-Net Premium to the Carrier
-* **Action**: The MGA initiates a cash remittance of **$8,500** ($9,000 received less $500 MGA commission) to the Carrier.
-* **MGA's Perspective**: The MGA reduces their trust cash balance and settles their liability to the Carrier.
-* **Journal Entry (MGA Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **2200** | Premium Payable — Carrier | 8,500 | | Carrier Partner |
-  | **1001** | Cash / Bank (MGA Premium Trust) | | 8,500 | Cost Center |
+#### Step 1.4: MGA Receives Net Premium from Broker ($9,000)
+* **MGA Journal Entry**:
+  * **Dr. 1001** Cash / Bank (MGA Premium Trust): **$9,000.00**
+  * **Cr. 2200** Premium Payable — Carrier: **$8,500.00**
+  * **Cr. 6100** Commission Revenue (MGA Override 5%): **$500.00**
 
-### Step 6: MGA Sends Monthly Bordereau (BX Report) to the Carrier
-* **Action**: The MGA submits the monthly Bordereau transaction log. The Carrier uploads this file into their Veridex subledger engine.
-* **Summary Log**:
-  ```text
-  Policy No.     : POL-2026-08819
-  Insured        : Commercial Logistics Corp
-  Retail Broker  : Links Insurance Agency (BROK-01)
-  MGA Partner    : Futuristic Underwriters (MGA-01)
-  Risk Carrier   : Southlake Insurance Co. (CAR-01)
-  Gross Premium  : $10,000.00
-  Broker Comm    : ($ 1,000.00)  [10.0%]
-  MGA Comm       : ($   500.00)  [ 5.0%]
-  Net Remittance : $ 8,500.00
-  ```
-* **Carrier's Perspective**: Upon ingestion, the Carrier books the full gross risk (unearned premium liability), records the broker and MGA commission acquisition costs, and establishes a net receivable due from the MGA.
-* **Journal Entry (Carrier Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **1100** | Premium Receivable — MGA | 8,500 | | MGA Partner / State / LOB |
-  | **6100** | Commission Expense — Broker | 1,000 | | Broker Partner / LOB |
-  | **6101** | Commission Expense — MGA Override | 500 | | MGA Partner / Cost Center |
-  | **2100** | Unearned Premium | | 10,000 | MGA Partner / State / LOB |
+#### Step 1.5: MGA Remits Net-Net Premium to Carrier ($8,500)
+* **MGA Journal Entry**:
+  * **Dr. 2200** Premium Payable — Carrier: **$8,500.00**
+  * **Cr. 1001** Cash / Bank (MGA Premium Trust): **$8,500.00**
+* *MGA Position Closed: Cash +$500.00 | Net Revenue +$500.00*
 
-### Step 7: Carrier Receives Settlement Cash from MGA
-* **Action**: The Carrier receives the **$8,500** bank wire sent by the MGA in Step 5. The Carrier reconciles this cash receipt against the outstanding Bordereau receivable.
-* **Carrier's Perspective**: The Carrier increases their cash balance and clears the receivable due from the MGA.
-* **Journal Entry (Carrier Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **1001** | Cash / Bank (Carrier Operating/Trust) | 8,500 | | Cost Center |
-  | **1100** | Premium Receivable — MGA | | 8,500 | MGA Partner / State / LOB |
+#### Step 1.6: Carrier Ingests Bordereau (BX Report)
+* **Carrier Journal Entry**:
+  * **Dr. 1100** Premium Receivable — MGA: **$8,500.00**
+  * **Dr. 6100** Commission Expense — Broker: **$1,000.00**
+  * **Dr. 6101** Commission Expense — MGA Override: **$500.00**
+  * **Cr. 2100** Unearned Premium Reserve: **$10,000.00**
 
-### Step 8: Subsequent Monthly Premium Earning (Carrier Revenue Recognition)
-* **Action**: For a 12-month annual policy, Carrier amortizes the unearned premium reserve monthly ($10,000 / 12 = **$833.33 / month**).
-* **Journal Entry (Carrier Ledger)**:
-  | Account Code | Account Name | Debit ($) | Credit ($) | Dimension Scope |
-  |---|---|---|---|---|
-  | **2100** | Unearned Premium | 833.33 | | LOB / State / Treaty |
-  | **4100** | Net Earned Premium Revenue | | 833.33 | LOB / State / Carrier |
+#### Step 1.7: Carrier Reconciles Net Cash Settlement from MGA ($8,500)
+* **Carrier Journal Entry**:
+  * **Dr. 1001** Cash / Bank (Carrier Operating): **$8,500.00**
+  * **Cr. 1100** Premium Receivable — MGA: **$8,500.00**
+* *Carrier Position: Cash +$8,500.00 | Unearned Reserve $10,000.00 | Net Acq. Cost $1,500.00*
 
 ---
 
-## 4. Summary Matrix of Value Chain Accounting
+## 4. Situation 2: DBM (Direct Bill to MGA)
 
-| Tier | Cash In | Cash Out | Commission Earned | Net GL Position |
-| :--- | :--- | :--- | :--- | :--- |
-| **Insured** | — | $10,000 | — | Prepaid Insurance Expense: $10,000 |
-| **Broker** | $10,000 (from Insured) | $9,000 (to MGA) | **$1,000 (10%)** | Net Revenue: $1,000 |
-| **MGA** | $9,000 (from Broker) | $8,500 (to Carrier) | **$500 (5%)** | Net Revenue: $500 |
-| **Carrier** | $8,500 (from MGA) | — | ($1,500 Total Expense) | Gross Risk: $10,000 Reserve / Net Earned Revenue: $8,500 |
+### Flow Overview:
+$$\text{Insured} \xrightarrow{\$10,000} \text{MGA} \begin{cases} \xrightarrow{\$1,000} \text{Broker (Commission Remittance)} \\ \xrightarrow{\$8,500} \text{Carrier (Net Settlement)} \end{cases}$$
+
+### Detailed Accounting Steps & Journal Entries:
+
+#### Step 2.1: MGA Invoices Insured Directly
+* **MGA Journal Entry**:
+  * **Dr. 1100** Premium Receivable — Insured: **$10,000.00**
+  * **Cr. 2200** Premium Payable — Carrier: **$8,500.00**
+  * **Cr. 2100** Commission Payable — Broker: **$1,000.00**
+  * **Cr. 6100** Commission Revenue — MGA Override: **$500.00**
+
+#### Step 2.2: Insured Pays Gross Premium Directly to MGA
+* **MGA Journal Entry**:
+  * **Dr. 1001** Cash / Bank (MGA Premium Trust): **$10,000.00**
+  * **Cr. 1100** Premium Receivable — Insured: **$10,000.00**
+
+#### Step 2.3: MGA Pays Broker Commission Remittance ($1,000)
+* **MGA Journal Entry**:
+  * **Dr. 2100** Commission Payable — Broker: **$1,000.00**
+  * **Cr. 1001** Cash / Bank (MGA Premium Trust): **$1,000.00**
+* **Broker Journal Entry (Receipt)**:
+  * **Dr. 1001** Cash / Bank (Broker Operating): **$1,000.00**
+  * **Cr. 6100** Commission Revenue: **$1,000.00**
+
+#### Step 2.4: MGA Remits Net Settlement to Carrier ($8,500)
+* **MGA Journal Entry**:
+  * **Dr. 2200** Premium Payable — Carrier: **$8,500.00**
+  * **Cr. 1001** Cash / Bank (MGA Premium Trust): **$8,500.00**
+* *MGA Position Closed: Cash +$500.00 | Net Revenue +$500.00*
+
+#### Step 2.5: Carrier Ingests Bordereau & Reconciles Cash
+* **Carrier Journal Entry (Bordereau Ingestion)**:
+  * **Dr. 1100** Premium Receivable — MGA: **$8,500.00**
+  * **Dr. 6100** Commission Expense — Broker: **$1,000.00**
+  * **Dr. 6101** Commission Expense — MGA Override: **$500.00**
+  * **Cr. 2100** Unearned Premium Reserve: **$10,000.00**
+* **Carrier Journal Entry (Cash Settlement)**:
+  * **Dr. 1001** Cash / Bank (Carrier Operating): **$8,500.00**
+  * **Cr. 1100** Premium Receivable — MGA: **$8,500.00**
 
 ---
 
-## 5. How Veridex Automates & Reconciles This Flow
+## 5. Situation 3: DBC (Direct Bill to Carrier)
 
-In the Veridex system, these steps are managed seamlessly by specialized modules:
-1. **Multi-Entity Architecture**: Switch between Broker, MGA, and Carrier workspaces with continuous, interconnected ledger views.
-2. **Subledger & Automated Split Engine**: Automatically ingests bulk MGA bordereau uploads (Excel/CSV) and executes multi-tier commission calculations, tax withholdings, and net-settlement schedules.
-3. **Multi-Dimension Accounting (GL)**: Every Journal Entry posted attaches dimensions such as `broker`, `mga`, `state`, and `lob` (Line of Business). This ensures granular financial reports like Trial Balances and Balance Sheets can be filtered dynamically by partner or region.
-4. **Reconciliation Module**: Veridex checks bank statements against subledgers automatically, alerting users to any variances between MGA-reported cash remittances and uploaded bordereaux.
+### Flow Overview:
+$$\text{Insured} \xrightarrow{\$10,000} \text{Carrier} \xrightarrow{\$1,500 \text{ Comm}} \text{MGA} \xrightarrow{\$1,000 \text{ Comm}} \text{Broker}$$
+
+### Detailed Accounting Steps & Journal Entries:
+
+#### Step 3.1: Carrier Invoices Insured Directly
+* **Carrier Journal Entry**:
+  * **Dr. 1100** Premium Receivable — Insured: **$10,000.00**
+  * **Cr. 2100** Unearned Premium Reserve: **$10,000.00**
+
+#### Step 3.2: Insured Pays Gross Premium Directly to Carrier
+* **Carrier Journal Entry**:
+  * **Dr. 1001** Cash / Bank (Carrier Operating): **$10,000.00**
+  * **Cr. 1100** Premium Receivable — Insured: **$10,000.00**
+
+#### Step 3.3: Carrier Accrues & Disburses Commission Remittance ($1,500)
+* **Carrier Journal Entry (Commission Accrual)**:
+  * **Dr. 6100** Commission Expense — Broker: **$1,000.00**
+  * **Dr. 6101** Commission Expense — MGA Override: **$500.00**
+  * **Cr. 2100** Commission Payable — Intermediaries: **$1,500.00**
+* **Carrier Journal Entry (Commission Disbursement to MGA)**:
+  * **Dr. 2100** Commission Payable — Intermediaries: **$1,500.00**
+  * **Cr. 1001** Cash / Bank (Carrier Operating): **$1,500.00**
+* *Carrier Net Cash: $10,000 - $1,500 = $8,500.00*
+
+#### Step 3.4: MGA Receives Combined Commission & Disburses Broker Share
+* **MGA Journal Entry (Receipt from Carrier)**:
+  * **Dr. 1001** Cash / Bank (MGA Operating): **$1,500.00**
+  * **Cr. 6100** Commission Revenue (MGA Override 5%): **$500.00**
+  * **Cr. 2100** Commission Payable — Broker: **$1,000.00**
+* **MGA Journal Entry (Disbursement to Broker)**:
+  * **Dr. 2100** Commission Payable — Broker: **$1,000.00**
+  * **Cr. 1001** Cash / Bank (MGA Operating): **$1,000.00**
+* *MGA Position Closed: Cash +$500.00 | Net Revenue +$500.00*
+
+#### Step 3.5: Broker Receives Commission Remittance
+* **Broker Journal Entry**:
+  * **Dr. 1001** Cash / Bank (Broker Operating): **$1,000.00**
+  * **Cr. 6100** Commission Revenue (Broker 10%): **$1,000.00**
+* *Broker Position Closed: Cash +$1,000.00 | Net Revenue +$1,000.00*
+
+---
+
+## 6. Comprehensive Value Chain Comparison Matrix
+
+| Financial Metric | DBA (Agency Bill) | DBM (Direct Bill to MGA) | DBC (Direct Bill to Carrier) |
+| :--- | :--- | :--- | :--- |
+| **Invoiced By** | Broker / Retail Agency | Managing General Agent (MGA) | Risk Carrier |
+| **Gross Invoiced Amount** | $10,000.00 | $10,000.00 | $10,000.00 |
+| **Insured Cash Paid To** | Broker ($10,000.00) | MGA ($10,000.00) | Carrier ($10,000.00) |
+| **Broker Cash In / Out** | +$10,000 / -$9,000 | +$1,000 (MGA payout) / $0 | +$1,000 (MGA payout) / $0 |
+| **Broker Net Margin** | **+$1,000.00 (10%)** | **+$1,000.00 (10%)** | **+$1,000.00 (10%)** |
+| **MGA Cash In / Out** | +$9,000 / -$8,500 | +$10,000 / -$9,500 ($1k+$8.5k) | +$1,500 / -$1,000 |
+| **MGA Net Margin** | **+$500.00 (5%)** | **+$500.00 (5%)** | **+$500.00 (5%)** |
+| **Carrier Cash In / Out** | +$8,500 (Net settlement) / $0 | +$8,500 (Net settlement) / $0 | +$10,000 / -$1,500 (Comm wire) |
+| **Carrier Net Cash** | **+$8,500.00** | **+$8,500.00** | **+$8,500.00** |
+| **Carrier Reserve** | $10,000.00 Unearned | $10,000.00 Unearned | $10,000.00 Unearned |
+| **Carrier Monthly Earn** | $833.33 / month | $833.33 / month | $833.33 / month |
+
+---
+
+## 7. Automated Test Suite
+
+To verify all 3 billing models programmatically, run:
+```bash
+node test-accounting-flows.js
+```
+The test suite validates:
+1. Double-entry balancing (`Debit === Credit`) across all JEs.
+2. Intermediary clearing account reconciliations (Accounts 1100, 2200, 2100).
+3. Exact matching of ending cash and revenue balances across Broker, MGA, and Carrier ledgers.

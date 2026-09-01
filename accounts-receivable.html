@@ -357,17 +357,13 @@
     const isOnboard = typeof isOnboarded === 'function' ? isOnboarded() : false;
 
     const defaults = isOnboard ? [] : (isCarrier ? [
+      { id: 'INV-V8NHT-1', policyNum: 'POL-V8NHT', customer: 'NTA', type: 'Commercial Trucking Premium', amount: 32257.00, paidAmount: 0, status: 'Sent', issueDate: '08/20/2026', dueDate: '09/19/2026' },
       { id: 'REC-MGA-001', policyNum: 'POL-2026-0428', customer: mgaName, type: 'Premium', amount: 71621.00, paidAmount: 0, status: 'Sent', issueDate: '05/14/2026', dueDate: '06/14/2026' },
-      { id: 'REC-MGA-002', policyNum: 'POL-2026-1934', customer: mgaName, type: 'Premium', amount: 41004.00, paidAmount: 0, status: 'Sent', issueDate: '05/13/2026', dueDate: '06/13/2026' },
-      { id: 'REC-MGA-003', policyNum: 'POL-2026-9041', customer: mgaName, type: 'Premium', amount: 8194.00, paidAmount: 8194.00, status: 'Paid', issueDate: '04/28/2026', dueDate: '05/28/2026' }
+      { id: 'REC-MGA-002', policyNum: 'POL-2026-1934', customer: mgaName, type: 'Premium', amount: 41004.00, paidAmount: 0, status: 'Sent', issueDate: '05/13/2026', dueDate: '06/13/2026' }
     ] : [
+      { id: 'INV-V8NHT-1', policyNum: 'POL-V8NHT', customer: 'Ayushi', type: 'Commercial Trucking Premium', amount: 39260.00, paidAmount: 0, status: 'Sent', issueDate: '08/20/2026', dueDate: '09/19/2026' },
       { id: 'AR-2026-0241', customer: 'Nationwide Partners', amount: 128400, paidAmount: 0, status: 'Sent', issueDate: '05/10/2026', dueDate: '06/10/2026' },
-      { id: 'AR-2026-0234', customer: 'State Farm Agency', amount: 38100, paidAmount: 0, status: 'Overdue', issueDate: '03/22/2026', dueDate: '04/22/2026' },
-      { id: 'AR-2026-0228', customer: 'Mega Insurance Group', amount: 44200, paidAmount: 0, status: 'Overdue', issueDate: '03/15/2026', dueDate: '04/15/2026' },
-      { id: 'AR-2026-0221', customer: 'RSA Partners', amount: 201300, paidAmount: 201300, status: 'Paid', issueDate: '04/28/2026', dueDate: '05/28/2026' },
-      { id: 'AR-2026-0215', customer: 'AXIS Direct', amount: 57100, paidAmount: 42825, status: 'Partial', issueDate: '04/25/2026', dueDate: '05/25/2026' },
-      { id: 'AR-2026-0208', customer: 'LMI Associates', amount: 98700, paidAmount: 98700, status: 'Paid', issueDate: '04/20/2026', dueDate: '05/20/2026' },
-      { id: 'AR-2026-0201', customer: 'RSA Partners', amount: 112400, paidAmount: 112400, status: 'Paid', issueDate: '04/15/2026', dueDate: '05/15/2026' }
+      { id: 'AR-2026-0234', customer: 'State Farm Agency', amount: 38100, paidAmount: 0, status: 'Overdue', issueDate: '03/22/2026', dueDate: '04/22/2026' }
     ]);
     
     const merged = [...stored];

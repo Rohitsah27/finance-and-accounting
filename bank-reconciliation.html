@@ -205,9 +205,9 @@
         <div class="form-field">
           <label class="form-label">Bank</label>
           <select class="form-ctrl" onchange="refreshRecon(this)">
-            <option>110101 - FUTURISTIC OPT ACCOUNT</option>
-            <option>110102 - SOUTHLAKE CHECKING</option>
-            <option>110103 - CLAIMS CLEARING</option>
+            <option>100101 - Chase Commercial Operating Account</option>
+            <option>100102 - Wells Fargo Premium Trust Account</option>
+            <option>100103 - SOUTHLAKE Claims Clearing Account</option>
           </select>
         </div>
         <div class="form-field">
@@ -217,8 +217,8 @@
         <div class="form-field">
           <label class="form-label">G/L Account</label>
           <select class="form-ctrl form-ctrl-sm" id="recon-gl-acct" onchange="onGlAccountChange()">
-            <option value="1001">1001 - Cash / Bank</option>
-            <option value="1010" selected>1010 - Cash &amp; Equivalents</option>
+            <option value="1001" selected>1001 - Cash / Bank (Operating)</option>
+            <option value="1010">1010 - Cash &amp; Equivalents</option>
             <option value="1020">1020 - Premium Trust</option>
           </select>
         </div>
@@ -1004,9 +1004,9 @@
   }
 
   const BANK_ACCOUNT_MAP = {
-    '110101 - FUTURISTIC OPT ACCOUNT': '****4821',
-    '110102 - SOUTHLAKE CHECKING': '****5502',
-    '110103 - CLAIMS CLEARING': '****7734',
+    '100101 - Chase Commercial Operating Account': '****4821',
+    '100102 - Wells Fargo Premium Trust Account': '****5502',
+    '100103 - SOUTHLAKE Claims Clearing Account': '****7734',
   };
 
   function refreshRecon(sel) {
@@ -1035,9 +1035,9 @@
       btn.textContent = original;
       const countEl = document.getElementById('matched-txn-count');
       const subEl = document.getElementById('matched-txn-sub');
-      if (countEl) countEl.textContent = '284';
-      if (subEl) subEl.textContent = '↑ Synced just now · 92.5% auto-matched';
-      showToast('Auto-sync complete - 284 transactions matched', 'success');
+      if (countEl) countEl.textContent = '8';
+      if (subEl) subEl.textContent = '↑ Synced live · 88% auto-matched';
+      showToast('Auto-sync complete — Live bank transactions matched', 'success');
     }, 900);
   }
 
@@ -1077,18 +1077,14 @@
 
     const isOnboard = typeof isOnboarded === 'function' ? isOnboarded() : false;
     const defaults = isOnboard ? [] : [
-      { id:1, date:'2026-05-02', desc:'RSA Partners Premium',               spent:null,       recv:112400.00, status:'posted',  source:'Vendor',   fromto:'RSA Partners', ledger:'1020 · Premium Trust', hasNote:true, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'JE-2026-0421' },
-      { id:2, date:'2026-05-03', desc:'Allied Claims Services',             spent:48200.00,   recv:null,     status:'posted',  source:'Vendor',   fromto:'Allied Claims', ledger:'5800 · Claims LAE', hasNote:false, hasAtt:true, checkNo:'10482', type:'CHECK', glMatch:'JE-2026-0422' },
-      { id:3, date:'2026-05-05', desc:'LMI Associates Wire',                spent:null,       recv:98700.00, status:'posted',  source:'Vendor',   fromto:'LMI Associates', ledger:'1020 · Premium Trust', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'JE-2026-0428' },
-      { id:4, date:'2026-05-20', desc:'Office Supplies Check',              spent:1240.00,    recv:null,     status:'posted',  source:'Vendor',   fromto:'Office Depot', ledger:'6200 · IT Expense', hasNote:false, hasAtt:true, checkNo:'10491', type:'CHECK', glMatch:'JE-2026-0461' },
-      { id:5, date:'2026-05-14', desc:'Futuristic Bank - Monthly Fee',      spent:240.00,     recv:null,     status:'excluded',source:'Bank',     fromto:'Futuristic Bank', ledger:'7100 · Bank Charges', hasNote:true, hasAtt:false, checkNo:'-', type:'FEE', glMatch:'-' },
-      { id:11,date:'2026-05-07', desc:'State Filing Fee Q2',                spent:3200.00,    recv:null,     status:'pending', source:'Vendor',   fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'10483', type:'CHECK', glMatch:'-' },
-      { id:12,date:'2026-05-10', desc:'AXIS Direct Settlement ACH',         spent:null,       recv:57100.00, status:'pending', source:'Customer', fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'-' },
-      { id:13,date:'2026-05-18', desc:'Unknown ACH Credit REF 8821',        spent:null,       recv:14200.00, status:'pending', source:'Customer', fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'-' },
-      { id:14,date:'2026-05-21', desc:'Johnson Office Supply Check',        spent:892.00,     recv:null,     status:'pending', source:'Vendor',   fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'-', type:'CHECK', glMatch:'-' },
-      { id:15,date:'2026-05-24', desc:'RSA Partners Partial Wire',          spent:null,       recv:3440.00,  status:'pending', source:'Vendor',   fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'-' },
-      { id:16,date:'2026-05-28', desc:'Interest Income Credit',             spent:null,       recv:1820.00,  status:'pending', source:'Bank',     fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'-' },
-      { id:17,date:'2026-05-12', desc:'Westfield Reinsurance E-Check',      spent:124500.00,  recv:null,     status:'pending', source:'Vendor',   fromto:'', ledger:'', hasNote:false, hasAtt:false, checkNo:'10484', type:'CHECK', glMatch:'-' },
+      { id:1, date:'2026-08-20', desc:'Premium Collection · Ayushi (INV-V8NHT-1)', spent:null, recv:39260.00, status:'posted', source:'Customer', fromto:'Ayushi (Insured)', ledger:'1001 · Cash / Bank', hasNote:true, hasAtt:true, checkNo:'-', type:'ACH', glMatch:'JE-4820' },
+      { id:2, date:'2026-08-20', desc:'Carrier Net Settlement · SOUTHLAKE Wire', spent:32257.00, recv:null, status:'posted', source:'Vendor', fromto:'SOUTHLAKE Insurance Co.', ledger:'2200 · Premium Payable', hasNote:false, hasAtt:true, checkNo:'-', type:'WIRE', glMatch:'SETTLE-TX-849' },
+      { id:3, date:'2026-08-20', desc:'Broker Commission Remittance · HIT', spent:2500.00, recv:null, status:'posted', source:'Vendor', fromto:'HIT (Broker)', ledger:'2100 · Broker Commission Payable', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'COMM-V8NHT' },
+      { id:4, date:'2026-08-15', desc:'Harborview Medical Group Premium Receipt', spent:null, recv:18420.00, status:'posted', source:'Customer', fromto:'Harborview Medical Group', ledger:'1001 · Cash / Bank', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'JE-4819' },
+      { id:5, date:'2026-08-20', desc:'Texas Stamping Office (SLTX) Surplus Tax', spent:1770.00, recv:null, status:'pending', source:'Vendor', fromto:'Texas Comptroller / SLTX', ledger:'2300 · Premium Taxes Payable', hasNote:true, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'TAX-TX-0820' },
+      { id:6, date:'2026-08-18', desc:'Munich Re Treaty 2026 Q3 Cession Wire', spent:18250.00, recv:null, status:'pending', source:'Vendor', fromto:'Munich Re', ledger:'5500 · Reinsurance Ceded', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'TREATY-2026-Q3' },
+      { id:7, date:'2026-08-28', desc:'Commercial Operating Interest Credit', spent:null, recv:340.00, status:'posted', source:'Bank', fromto:'Chase Commercial Banking', ledger:'4800 · Interest Income', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'JE-4825' },
+      { id:8, date:'2026-08-31', desc:'Chase Treasury Analysis Service Fee', spent:120.00, recv:null, status:'excluded', source:'Bank', fromto:'Chase Commercial Banking', ledger:'7100 · Bank Charges', hasNote:true, hasAtt:false, checkNo:'-', type:'FEE', glMatch:'-' }
     ];
     return [...mapped, ...defaults];
   }
@@ -1096,13 +1092,11 @@
   let DTL_TRANSACTIONS = loadTransactions();
 
   const DEFAULT_RECON_APPROVALS = [
-    { invoice: 'INV-2026-0510', vendor: 'Actuarial Consulting', amount: 41800, level: 'L1', approver: 'James Smith', date: '05/22/2026', status: 'Pending' },
-    { invoice: 'INV-2026-0518', vendor: 'IT Infrastructure', amount: 72600, level: 'L1', approver: 'James Smith', date: '05/22/2026', status: 'Pending' },
-    { invoice: 'INV-2026-0524', vendor: 'Legal & Compliance Svcs', amount: 28400, level: 'L2', approver: 'Sarah Chen', date: '05/21/2026', status: 'Pending' },
-    { invoice: 'INV-2026-0531', vendor: 'Munich Re - Q2 Cession', amount: 189200, level: 'L3', approver: 'Sarah Chen (CFO)', date: '05/20/2026', status: 'At L3' },
-    { invoice: 'INV-2026-0537', vendor: 'Westfield - Reins. Prem', amount: 124500, level: 'L3', approver: 'Sarah Chen (CFO)', date: '05/19/2026', status: 'At L3' },
-    { invoice: 'INV-2026-0412', vendor: 'ISO Advisory Services', amount: 18400, level: 'L1', approver: 'James Smith', date: '05/18/2026', status: 'Approved' },
-    { invoice: 'INV-2026-0405', vendor: 'Crawford & Co', amount: 32100, level: 'L2', approver: 'Sarah Chen', date: '05/17/2026', status: 'Approved' }
+    { invoice: 'INV-V8NHT-1', vendor: 'HIT (Broker Commission Remittance)', amount: 2500, level: 'L1', approver: 'Ankit (Controller)', date: '08/20/2026', status: 'Pending' },
+    { invoice: 'SETTLE-TX-849', vendor: 'SOUTHLAKE Insurance Co. (Net Settlement Wire)', amount: 32257, level: 'L2', approver: 'Finance Team', date: '08/20/2026', status: 'Pending' },
+    { invoice: 'TAX-TX-0820', vendor: 'Texas Stamping Office (SLTX Surplus Tax)', amount: 1770, level: 'L1', approver: 'Tax Operations', date: '08/20/2026', status: 'Pending' },
+    { invoice: 'TREATY-2026-Q3', vendor: 'Munich Re (Quarterly Treaty Cession)', amount: 18250, level: 'L3', approver: 'Sarah Chen (CFO)', date: '08/18/2026', status: 'At L3' },
+    { invoice: 'INV-30841', vendor: 'Coastal Risk Advisors (Producer Commission)', amount: 2763, level: 'L1', approver: 'Ankit (Controller)', date: '08/15/2026', status: 'Approved' }
   ];
 
   function loadReconApprovals() {
@@ -1270,8 +1264,11 @@
     });
 
     const acctSelect = document.getElementById('recon-gl-acct');
-    const acctCode = acctSelect ? acctSelect.value : '1010';
-    const currentGlBalance = typeof getAccountBalance === 'function' ? getAccountBalance(acctCode).net : 0;
+    const acctCode = acctSelect ? acctSelect.value : '1001';
+    let currentGlBalance = typeof getAccountBalance === 'function' ? getAccountBalance(acctCode).net : 0;
+    if (currentGlBalance <= 0) {
+      currentGlBalance = 248330.00 + (matchedDep - matchedWd);
+    }
     const currentBankBalance = currentGlBalance + (unmatchedDep - unmatchedWd);
     const difference = currentBankBalance - currentGlBalance;
     

@@ -117,7 +117,8 @@ const NAV_ICONS = {
   'tax': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><rect x="32" y="48" width="192" height="160" rx="16" stroke="currentColor" stroke-width="18"/><path d="M80 96h24M152 96h24M80 144h32M152 144h24M120 96v64" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
   'budgeting': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M32 208l56-64 48 40 48-80 40 32M32 48h192" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   'reporting': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><rect x="48" y="24" width="160" height="208" rx="16" stroke="currentColor" stroke-width="18"/><path d="M96 80h64M96 128h64M96 176h32" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
-  'workflow': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><circle cx="64" cy="128" r="24" stroke="currentColor" stroke-width="18"/><circle cx="128" cy="128" r="24" stroke="currentColor" stroke-width="18"/><circle cx="192" cy="128" r="24" stroke="currentColor" stroke-width="18"/><path d="M88 128h16M152 128h16" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
+  'workflow': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><rect x="36" y="40" width="64" height="48" rx="8" stroke="currentColor" stroke-width="18"/><rect x="156" y="104" width="64" height="48" rx="8" stroke="currentColor" stroke-width="18"/><rect x="36" y="168" width="64" height="48" rx="8" stroke="currentColor" stroke-width="18"/><path d="M100 64h24a20 20 0 0120 20v44M100 192h24a20 20 0 0020-20v-44" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  'approval-chains': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M84 132l28 28 60-60" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="40" width="176" height="176" rx="20" stroke="currentColor" stroke-width="18"/><path d="M96 40V24M160 40V24" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
   'insurance': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M128 24L32 64v64c0 52 40 100 96 112 56-12 96-60 96-112V64L128 24z" stroke="currentColor" stroke-width="18" stroke-linejoin="round"/><path d="M88 128l28 28 52-52" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   'subledger': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><rect x="32" y="160" width="192" height="48" rx="8" stroke="currentColor" stroke-width="18"/><rect x="32" y="104" width="192" height="48" rx="8" stroke="currentColor" stroke-width="18"/><rect x="32" y="48" width="192" height="48" rx="8" stroke="currentColor" stroke-width="18"/></svg>`,
   'reinsurance': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M224 128a96 96 0 01-192 0" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><path d="M32 128a96 96 0 01192 0" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><path d="M176 88l48 40-48 40M80 88L32 128l48 40" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -134,6 +135,9 @@ const NAV_ICONS = {
   'pas-policy': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M160 32H56a16 16 0 00-16 16v160a16 16 0 0016 16h144a16 16 0 0016-16V88z" stroke="currentColor" stroke-width="18" stroke-linejoin="round"/><path d="M160 32v56h56M96 144l20 20 44-44" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   'insurance-flow-simulator': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><rect x="24" y="48" width="208" height="160" rx="16" stroke="currentColor" stroke-width="18"/><path d="M64 128h128M64 96l32 32-32 32" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   'premium-claims': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M128 24L32 64v64c0 52 40 100 96 112 56-12 96-60 96-112V64L128 24z" stroke="currentColor" stroke-width="18" stroke-linejoin="round"/><path d="M88 128l28 28 52-52" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  'docs': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M48 40h120a16 16 0 0116 16v160a16 16 0 01-16 16H48a16 16 0 01-16-16V56a16 16 0 0116-16z" stroke="currentColor" stroke-width="18"/><path d="M184 80h24a16 16 0 0116 16v120a16 16 0 01-16 16h-40" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><path d="M80 96h64M80 136h64M80 176h40" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
+  'docs-portal': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M48 40h120a16 16 0 0116 16v160a16 16 0 01-16 16H48a16 16 0 01-16-16V56a16 16 0 0116-16z" stroke="currentColor" stroke-width="18"/><path d="M80 96h64M80 136h64M80 176h40" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>`,
+  'dictionary': `<svg width="18" height="18" viewBox="0 0 256 256" fill="none"><path d="M32 64a24 24 0 0124-24h152a16 16 0 0116 16v160H56a24 24 0 00-24 24z" stroke="currentColor" stroke-width="18" stroke-linejoin="round"/><path d="M32 192a24 24 0 0124-24h168" stroke="currentColor" stroke-width="18"/></svg>`,
 };
 
 const BELL_SVG = `<svg width="16" height="16" viewBox="0 0 256 256" fill="none"><path d="M128 24a64 64 0 00-64 64v44.8L44.8 160h166.4L192 132.8V88a64 64 0 00-64-64z" stroke="currentColor" stroke-width="20" stroke-linejoin="round"/><path d="M104 200a24 24 0 0048 0" stroke="currentColor" stroke-width="20"/></svg>`;
@@ -166,6 +170,8 @@ const NAV_CONFIG = [
   ]},
   { id: 'accounts-payable', label: 'Accounts Payable', moduleId: 'ap', children: [
     { id: 'accounts-payable', label: 'All Invoices',  href: 'accounts-payable.html' },
+    { id: 'ap-ach',           label: 'ACH Payments',  href: 'accounts-payable.html#ap-ach' },
+    { id: 'ap-echecks',       label: 'E-Checks',      href: 'accounts-payable.html#ap-echecks' },
     { id: 'ap-aging',         label: 'AP Aging',      href: 'accounts-payable.html#ap-aging' },
   ]},
   { id: 'bank', label: 'Bank & Cash Management', moduleId: 'bank', children: [
@@ -192,7 +198,6 @@ const NAV_CONFIG = [
   ]},
   { id: 'tax', label: 'Tax Engine', moduleId: 'tax', children: [
     { id: 'tax', label: 'Tax Engine', href: 'tax-engine.html' },
-    { id: 'premium-tax', label: 'Premium Tax Calculator', href: 'premium-tax-calculator.html', industryOnly: true },
   ]},
   { id: 'budgeting', label: 'Budgeting & Forecasting', moduleId: 'budgeting', children: [
     { id: 'budgeting', label: 'Budgets & Forecasts', href: 'budgeting-forecasting.html' },
@@ -201,7 +206,7 @@ const NAV_CONFIG = [
     { id: 'reporting', label: 'Report & Dashboard Builder', href: 'reporting-analytics.html' },
   ]},
   { id: 'workflow', label: 'Workflow & Approvals', moduleId: 'workflow', children: [
-    { id: 'workflow', label: 'Approval Chains', href: 'workflow-approvals.html' },
+    { id: 'approval-chains', label: 'Approval Chains', href: 'workflow-approvals.html' },
   ]},
   { id: 'pas-policy', label: 'Policy Admin (PAS)', moduleId: 'insurance', children: [
     { id: 'pas-policy', label: 'Policy Admin & Lifecycle', href: 'pas-policy.html' }
@@ -238,6 +243,10 @@ const NAV_CONFIG = [
   { id: 'identity', label: 'Identity & Security', moduleId: 'identity', children: [
     { id: 'identity', label: 'User Management', href: 'user-management.html' },
   ]},
+  { id: 'docs', label: 'Documentation & Help', moduleId: null, children: [
+    { id: 'docs-portal', label: 'System Documentation', href: 'docs/index.html' },
+    { id: 'dictionary', label: 'Insurance Dictionary', href: 'dictionary/index.html' },
+  ]},
 ];
 
 function navIcon(id) {
@@ -247,6 +256,7 @@ function navIcon(id) {
 
 function isGroupVisibleForType(groupId, businessType) {
   if (groupId === 'budgeting') return false;
+  if (groupId === 'docs') return true;
   const insuranceGroups = ['pas-policy', 'premium-claims', 'subledger', 'reinsurance', 'statutory-reports', 'mga-operations', 'compliance-filings'];
   
   if (businessType === 'agency' || businessType === 'broker') {
@@ -254,7 +264,7 @@ function isGroupVisibleForType(groupId, businessType) {
       'dashboard', 'pas-policy', 'commission',
       'gl', 'accounts-receivable', 'billing', 'accounts-payable', 'bank', 
       'tax', 'reporting', 'workflow', 
-      'audit-trail', 'documents', 'identity', 'admin-config', 'integration'
+      'audit-trail', 'documents', 'identity', 'admin-config', 'integration', 'docs'
     ];
     return allowed.includes(groupId);
   }
@@ -263,7 +273,7 @@ function isGroupVisibleForType(groupId, businessType) {
       'dashboard', 'pas-policy', 'premium-claims', 'subledger', 'mga-operations',
       'gl', 'accounts-receivable', 'billing', 'accounts-payable', 'bank', 
       'commission', 'tax', 'reporting', 'workflow', 
-      'audit-trail', 'documents', 'identity', 'admin-config', 'integration'
+      'audit-trail', 'documents', 'identity', 'admin-config', 'integration', 'docs'
     ];
     return allowed.includes(groupId);
   }
@@ -273,7 +283,7 @@ function isGroupVisibleForType(groupId, businessType) {
       'reinsurance', 'statutory-reports', 'mga-operations', 'compliance-filings',
       'gl', 'accounts-receivable', 'billing', 'accounts-payable', 'bank', 
       'commission', 'tax', 'reporting', 'workflow', 
-      'audit-trail', 'documents', 'identity', 'admin-config', 'integration'
+      'audit-trail', 'documents', 'identity', 'admin-config', 'integration', 'docs'
     ];
     return allowed.includes(groupId);
   }
@@ -282,7 +292,7 @@ function isGroupVisibleForType(groupId, businessType) {
       'dashboard', 'reinsurance', 'statutory-reports', 'compliance-filings',
       'gl', 'accounts-receivable', 'billing', 'accounts-payable', 'bank', 
       'tax', 'reporting', 'workflow', 
-      'audit-trail', 'documents', 'identity', 'admin-config', 'integration'
+      'audit-trail', 'documents', 'identity', 'admin-config', 'integration', 'docs'
     ];
     return allowed.includes(groupId);
   }
