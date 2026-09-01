@@ -87,13 +87,26 @@
       </div>
     </div>
 
+
+  <!-- ═══ TABS ═══ -->
+  <div class="page-tabs" id="commtabs">
+    <button class="page-tab active" data-tab="schedules" onclick="switchTab('commtabs','schedules')">Schedules & Agreements</button>
+    <button class="page-tab" data-tab="transactions" onclick="switchTab('commtabs','transactions')">Transactions</button>
+    <button class="page-tab" data-tab="statements" onclick="switchTab('commtabs','statements')">Statements & Remittance</button>
+    <button class="page-tab" data-tab="disputes" onclick="switchTab('commtabs','disputes')">Dispute Workflow</button>
+  </div>
+
+  <div class="tab-panel active" data-panel="schedules">
     <!-- Commission Schedules -->
     <div class="table-wrap" style="margin-bottom:24px;">
       <div class="table-head-row">
         <div class="table-head-title">Commission Schedules &amp; Rating Agreements</div>
         <div class="table-head-actions">
-          <input type="text" class="filter-input" placeholder="Search plan name..." id="cs-search" oninput="filterPlans(this.value)" style="width:220px;">
-          <button class="btn btn-primary btn-sm" onclick="toggleNewPlanForm()">+ New Plan</button>
+          <div class="search-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="filter-input" placeholder="Search plan name..." id="cs-search" oninput="filterPlans(this.value)" style="width:220px;">
+          </div>
+          <button class="btn btn-primary" onclick="toggleNewPlanForm()">+ New Plan</button>
         </div>
       </div>
       
@@ -150,7 +163,7 @@
     </div>
 
     <!-- Multi-Level Hierarchy -->
-    <div class="table-wrap" style="margin-bottom:24px; padding:16px;">
+    <div class="table-wrap" style="margin-bottom:24px; padding:16px; display:none;">
       <div class="table-head-row" style="padding:0 0 12px;">
         <div class="table-head-title">Multi-Level Hierarchy — Commission Splits (SOUTHLAKE &bull; NTA &bull; HIT)</div>
       </div>
@@ -231,14 +244,21 @@
       </div>
     </div>
 
-    <!-- Commission Transactions -->
+    </div>
+
+  <div class="tab-panel" data-panel="transactions">
+  <!-- Commission Transactions -->
     <div class="table-wrap" style="margin-bottom:24px;">
       <div class="table-head-row">
         <div class="table-head-title">Commission Transactions</div>
         <div class="table-head-actions">
-          <input type="text" class="filter-input" placeholder="Search producer, policy..." id="ct-search" oninput="filterTransactions(this.value)" style="width:220px;">
+          <div class="search-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="filter-input" placeholder="Search producer, policy..." id="ct-search" oninput="filterTransactions(this.value)" style="width:220px;">
+          </div>
         </div>
       </div>
+      <div style="overflow-x:auto;">
       <table class="data-table" id="ct-table">
         <thead>
           <tr>
@@ -258,9 +278,13 @@
           <!-- Rendered dynamically -->
         </tbody>
       </table>
+      </div>
     </div>
 
-    <!-- Commission Statements -->
+    </div>
+
+  <div class="tab-panel" data-panel="statements">
+  <!-- Commission Statements -->
     <div class="table-wrap" style="margin-bottom:24px;">
       <div class="table-head-row">
         <div class="table-head-title">Commission Statements &amp; Remittance Batches</div>
@@ -282,7 +306,10 @@
       </table>
     </div>
 
-    <!-- Dispute Workflow -->
+    </div>
+
+  <div class="tab-panel" data-panel="disputes">
+  <!-- Dispute Workflow -->
     <div class="table-wrap" style="padding:16px;">
       <div class="table-head-row" style="padding:0 0 12px;">
         <div class="table-head-title">Dispute Workflow</div>
@@ -292,7 +319,9 @@
       </div>
     </div>
 
-    <!-- Commission Statement Modal -->
+    </div>
+
+  <!-- Commission Statement Modal -->
     <div class="comm-modal" id="statement-modal">
       <div class="comm-modal-content">
         <div class="comm-modal-header">
