@@ -341,7 +341,33 @@
       document.getElementById('ob-role-other-wrap').style.display = this.value === 'other' ? '' : 'none';
     });
 
-    // No auto-fill name/role on step 1 to allow the user to type their own details manually
+    // Auto-fill name and business details based on logged-in module to speed up prototype testing
+    try {
+      if (typeof getTenantConfig === 'function') {
+        const cfg = getTenantConfig();
+        const nameInput = document.getElementById('ob-name');
+        const companyInput = document.getElementById('ob-company-name');
+        const descInput = document.getElementById('ob-business-label');
+        
+        if (cfg.businessType === 'carrier') {
+          nameInput.value = 'SOUTHLAKE';
+          companyInput.value = "SOUTHLAKE";
+          descInput.value = "Risk Carrier";
+        } else if (cfg.businessType === 'mga') {
+          nameInput.value = 'NTA';
+          companyInput.value = "NTA";
+          descInput.value = "MGA Operators";
+        } else if (cfg.businessType === 'agency' || cfg.businessType === 'broker') {
+          nameInput.value = 'HIT';
+          companyInput.value = "HIT";
+          descInput.value = "Agency Operators";
+        } else if (cfg.businessType === 'insured') {
+          nameInput.value = 'Ayushi';
+          companyInput.value = "Ayushi";
+          descInput.value = "Insured Org";
+        }
+      }
+    } catch (ex) {}
 
     renderSteps();
   </script>

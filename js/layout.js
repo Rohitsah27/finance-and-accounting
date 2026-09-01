@@ -3,6 +3,76 @@
    Complies strictly with README_UI_FRAMEWORK_FINAL.md
    ============================================================ */
 
+window.THEMES = {
+  default: {
+    '--color-brand': '#F97316',
+    '--color-brand-dark': '#EA6A08',
+    '--color-brand-light': '#FFF7ED',
+    '--color-brand-gradient': 'linear-gradient(135deg, #F97316, #F59E0B)'
+  },
+  blue: {
+    '--color-brand': '#2563EB',
+    '--color-brand-dark': '#1D4ED8',
+    '--color-brand-light': '#EFF6FF',
+    '--color-brand-gradient': 'linear-gradient(135deg, #2563EB, #3B82F6)'
+  },
+  emerald: {
+    '--color-brand': '#059669',
+    '--color-brand-dark': '#047857',
+    '--color-brand-light': '#ECFDF5',
+    '--color-brand-gradient': 'linear-gradient(135deg, #059669, #10B981)'
+  },
+  purple: {
+    '--color-brand': '#7C3AED',
+    '--color-brand-dark': '#6D28D9',
+    '--color-brand-light': '#F5F3FF',
+    '--color-brand-gradient': 'linear-gradient(135deg, #7C3AED, #8B5CF6)'
+  }
+};
+
+window.applyTheme = function(themeKey) {
+  const theme = window.THEMES[themeKey] || window.THEMES['default'];
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(theme)) {
+    root.style.setProperty(key, value);
+  }
+};
+
+window.changeTheme = function(themeKey) {
+  if (typeof getTenantConfig === 'function' && typeof saveTenantConfig === 'function') {
+    const cfg = getTenantConfig();
+    cfg.themeColor = themeKey;
+    saveTenantConfig(cfg);
+  } else {
+    localStorage.setItem('v_theme_color', themeKey);
+  }
+  window.applyTheme(themeKey);
+};
+
+// Immediately apply theme on load if present
+(function() {
+  try {
+    let pfx = '';
+    const remUser = localStorage.getItem('v_remembered_user');
+    const sessUser = sessionStorage.getItem('v_current_user');
+    const u = sessUser || remUser;
+    if (u) {
+      const parsed = JSON.parse(u);
+      pfx = (parsed.role === 'broker' ? 'broker' : parsed.role) + '_';
+    }
+    const raw = localStorage.getItem(pfx + 'v_tenant_config');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.themeColor) {
+        window.applyTheme(parsed.themeColor);
+        return;
+      }
+    }
+    const fallbackTheme = localStorage.getItem('v_theme_color');
+    if (fallbackTheme) window.applyTheme(fallbackTheme);
+  } catch(e) {}
+})();
+
 const VD_MONOGRAM_SVG = `
 <svg class="logo-vd-mark" width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -335,7 +405,34 @@ function buildEntitySwitcher() {
   const groups = { insurance: 'Insurance Operations', general: 'General Business' };
   let menu = '';
   ['insurance', 'general'].forEach(g => {
-    let ents = (cfg.secondaryEntities || []).filter(e => typeof getBusinessType === 'function' && getBusinessType(e.businessType).group === g);
+    let ents = (cfg.secondaryEntities || []).filter(e => {
+      if (typeof getBusinessType !== 'function') return false;
+      if (getBusinessType(e.businessType).group !== g) return false;
+      
+      let isOnboarded = false;
+      let actualName = e.name;
+      
+      if (e.id === active.id || e.id === 'ENT-MINE') {
+        isOnboarded = true;
+        if (e.id === 'ENT-MINE') actualName = cfg.companyName;
+      }
+      
+      const pfx = e.businessType === 'agency' ? 'broker_' : (e.businessType + '_');
+      const raw = localStorage.getItem(pfx + 'v_tenant_config');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.onboarded) {
+            isOnboarded = true;
+            if (parsed.companyName) actualName = parsed.companyName;
+          }
+        } catch (ex) {}
+      }
+      
+      e.displayName = actualName;
+      return isOnboarded;
+    });
+
     if (!ents.length) return;
     menu += `<div class="v-entity-menu-group-label">${groups[g]}</div>`;
     ents.forEach(e => {
@@ -343,7 +440,7 @@ function buildEntitySwitcher() {
       menu += `<div class="v-entity-menu-item ${e.id === active.id ? 'active' : ''}" onclick="switchActiveEntity('${e.id}')">
         <div class="v-entity-avatar">${ebt.icon}</div>
         <div>
-          <div style="font-size:12px;font-weight:600;color:var(--color-ink);">${e.name}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--color-ink);">${e.displayName || e.name}</div>
           <div style="font-size:11px;color:var(--color-muted);">${ebt.label}</div>
         </div>
       </div>`;
@@ -553,6 +650,16 @@ function initLayout(activeId) {
               <svg width="15" height="15" viewBox="0 0 256 256" fill="none"><circle cx="128" cy="128" r="40" stroke="currentColor" stroke-width="18"/><path d="M128 24v24M128 208v24M24 128h24M208 128h24" stroke="currentColor" stroke-width="18" stroke-linecap="round"/></svg>
               <span>Configuration Centre</span>
             </a>
+            <div class="v-user-menu-divider"></div>
+            <div style="padding: 12px 16px;">
+              <div style="font-size:11px;font-weight:600;color:var(--color-ink-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Company Theme</div>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="theme-swatch" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:#F97316;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);" onclick="window.changeTheme('default'); event.stopPropagation();" title="Default Orange"></button>
+                <button type="button" class="theme-swatch" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:#2563EB;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);" onclick="window.changeTheme('blue'); event.stopPropagation();" title="Ocean Blue"></button>
+                <button type="button" class="theme-swatch" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:#059669;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);" onclick="window.changeTheme('emerald'); event.stopPropagation();" title="Emerald Green"></button>
+                <button type="button" class="theme-swatch" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;background:#7C3AED;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);" onclick="window.changeTheme('purple'); event.stopPropagation();" title="Amethyst Purple"></button>
+              </div>
+            </div>
             <div class="v-user-menu-divider"></div>
             <button type="button" class="v-user-menu-item v-user-menu-logout" onclick="handleLogout()">
               <svg width="15" height="15" viewBox="0 0 256 256" fill="none"><path d="M112 40H48a16 16 0 00-16 16v144a16 16 0 0016 16h64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/><path d="M168 88l40 40-40 40M208 128H96" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></svg>

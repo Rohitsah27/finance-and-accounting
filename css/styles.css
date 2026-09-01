@@ -3175,3 +3175,89 @@ textarea:focus {
     border: 1px solid #CCCCCC !important;
   }
 }
+
+/* ============================================================
+   Toast Notifications
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  bottom: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9999;
+}
+
+.toast {
+  background: var(--color-panel, #FFFFFF);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: 400px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink, #0D1117);
+  border: 1px solid var(--color-border, #E2E5EA);
+  border-left: 4px solid var(--color-muted, #6B7280);
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast.toast-success { border-left-color: var(--color-success); }
+.toast.toast-error { border-left-color: var(--color-danger); }
+.toast.toast-warning { border-left-color: var(--color-warning); }
+.toast.toast-info { border-left-color: var(--color-info); }
+
+.toast span:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.toast.toast-success span:first-child {
+  background: var(--color-success-bg, #F0FDF4);
+  color: var(--color-success);
+}
+.toast.toast-error span:first-child {
+  background: var(--color-danger-bg, #FEF2F2);
+  color: var(--color-danger);
+}
+.toast.toast-warning span:first-child {
+  background: var(--color-warning-bg, #FFFBEB);
+  color: var(--color-warning);
+}
+.toast.toast-info span:first-child {
+  background: var(--color-info-bg, #EFF6FF);
+  color: var(--color-info);
+}
+
+.toast span:last-child {
+  line-height: 1.4;
+  word-break: break-word;
+  color: var(--color-ink-secondary, #374151);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
