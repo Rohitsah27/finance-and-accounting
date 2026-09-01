@@ -138,7 +138,7 @@
 <script src="js/app.js"></script>
 <script>
 /* ═══════════════════ SEED DATA ═══════════════════ */
-const IS_DEMO = typeof getActiveEntity === 'function' ? getActiveEntity().id !== 'ENT-MINE' : true;
+const IS_DEMO = true;
 const CARRIERS = IS_DEMO ? [
   {id:'Southlake', name:'Southlake Insurance Co.', full:'Program: Commercial Property', icon:'🏛️', color:'#0d1b4b', bg:'#e8f0ff', limit:8.0, structure:'Flat 18%', trigger:'Loss ratio ≤ 55%'},
   {id:'Meridian',  name:'Meridian Insurance Group', full:'Program: General Casualty', icon:'⚖️', color:'#6a1b9a', bg:'#f3e5f5', limit:5.0, structure:'Sliding Scale 15–22%', trigger:'Loss ratio 45–60% band'},

@@ -100,7 +100,7 @@ const ACTIVE_ENTITY = getActiveEntity();
 document.getElementById('dash-subtitle').textContent = 'Controls & compliance overview · ' + ACTIVE_ENTITY.name;
 
 /* ═══════════════════ SEED DATA ═══════════════════ */
-const IS_DEMO = getActiveEntity().id !== 'ENT-MINE';
+const IS_DEMO = true;
 const EVENTS = IS_DEMO ? [
   { ts:'2026-08-20 23:14', entity:'Southlake Insurance Co.', event:'Manual JE > $250,000 posted', user:'M. Alvarez', detail:'JE-2026-0306 - Ceded reserve adjustment', risk:'high', days:0 },
   { ts:'2026-08-19 22:47', entity:'AC Manufacturing Inc.',   event:'After-hours posting',          user:'D. Kessler', detail:'JE-2026-0302 posted at 22:47 local time', risk:'medium', days:1 },
