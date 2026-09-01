@@ -78,7 +78,7 @@ document.getElementById('dash-subtitle').textContent =
   'Plain-English view of your finances · ' + ACTIVE_ENTITY.name;
 
 /* ═══════════════════ SEED DATA ═══════════════════ */
-const IS_DEMO = typeof getActiveEntity === 'function' ? getActiveEntity().id !== 'ENT-MINE' : true;
+const IS_DEMO = true;
 const TF_MULT = { week:0.24, month:1, quarter:3.1 };
 const BASE = IS_DEMO ? { cash:62400, owedToMe:38150, iOwe:21900, profit:14200 } : { cash:0, owedToMe:0, iOwe:0, profit:0 };
 

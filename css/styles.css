@@ -3261,3 +3261,35 @@ textarea:focus {
   }
 }
 
+/* ============================================================
+   RESPONSIVE DASHBOARD & GRID TWEAKS
+   ============================================================ */
+
+.v-dashboard-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1400px) {
+  .v-dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .v-module-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  .v-dashboard-layout {
+    gap: 16px;
+  }
+}

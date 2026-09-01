@@ -106,7 +106,7 @@ const ACTIVE_ENTITY = getActiveEntity();
 document.getElementById('dash-subtitle').textContent = 'Day-to-day operational workspace · ' + ACTIVE_ENTITY.name;
 
 /* ═══════════════════ SEED DATA ═══════════════════ */
-const IS_DEMO = getActiveEntity().id !== 'ENT-MINE';
+const IS_DEMO = true;
 const TASKS = IS_DEMO ? [
   { id:'T-1', type:'je', priority:'high',   title:'Approve JE-2026-0301 - Accrued commission expense', meta:'$184,250 · Prepared by M. Alvarez', done:false },
   { id:'T-2', type:'ap', priority:'high',   title:'Code bill from Turbine Parts Supply Co.',            meta:'$22,480 · Due in 3 days', done:false },

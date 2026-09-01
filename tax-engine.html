@@ -19,6 +19,10 @@
     .tax-lookup-result { margin-top:14px; padding:12px 14px; border-radius:var(--radius); background:var(--v-teal-bg); border:1px solid rgba(15,110,99,0.25); font-size:12.5px; color:var(--gray-700); display:none; }
     .tax-lookup-result.show { display:block; }
     .tax-copy { font-size:12px; color:var(--gray-500); line-height:1.6; margin-bottom:14px; max-width:900px; }
+    .pill-tabbar { display:flex; gap:4px; background:var(--gray-100); border-radius:8px; padding:4px; margin-bottom:20px; width:fit-content; border:1px solid var(--gray-200); }
+    .pill-tab { padding:6px 18px; font-size:12.5px; font-weight:600; border-radius:6px; cursor:pointer; color:var(--gray-500); border:none; background:transparent; transition:all .15s; }
+    .pill-tab:hover { color:var(--navy); }
+    .pill-tab.active { background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.08); border: 1px solid var(--gray-200); }
   </style>
 </head>
 <body>
@@ -82,7 +86,13 @@
 
   <!-- ── 1. INSURANCE & SURPLUS TAXES ── -->
   <div class="tab-panel active" data-panel="salesuse">
+    <div class="pill-tabbar">
+      <button class="pill-tab active" onclick="switchSubTab('sales-panel', 'sales-nexus', this)">Nexus & Registrations</button>
+      <button class="pill-tab" onclick="switchSubTab('sales-panel', 'sales-rates', this)">Tax Rates & Lookup</button>
+      <button class="pill-tab" onclick="switchSubTab('sales-panel', 'sales-certs', this)">Exemption Certificates</button>
+    </div>
 
+    <div id="sales-nexus" class="sub-panel sales-panel">
     <div class="table-wrap" style="margin-bottom:20px;">
       <div class="table-head-row">
         <div class="table-head-title">State Nexus &amp; Surplus Stamping Registrations</div>
@@ -100,7 +110,9 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End sales-nexus -->
 
+    <div id="sales-rates" class="sub-panel sales-panel" style="display:none;">
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
         <div class="card-title">Rate Engine Lookup (ZIP+4 / Jurisdiction)</div>
@@ -181,7 +193,9 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End sales-rates -->
 
+    <div id="sales-certs" class="sub-panel sales-panel" style="display:none;">
     <div class="table-wrap">
       <div class="table-head-row">
         <div class="table-head-title">Exemption Certificates &amp; Reseller Waivers</div>
@@ -196,10 +210,17 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End sales-certs -->
   </div>
 
   <!-- ── 2. PAYROLL TAX ── -->
   <div class="tab-panel" data-panel="payroll">
+    <div class="pill-tabbar">
+      <button class="pill-tab active" onclick="switchSubTab('pay-panel', 'pay-summary', this)">Tax Summary</button>
+      <button class="pill-tab" onclick="switchSubTab('pay-panel', 'pay-filing', this)">Filing Status</button>
+    </div>
+
+    <div id="pay-summary" class="sub-panel pay-panel">
     <div class="table-wrap" style="margin-bottom:20px;">
       <div class="table-head-row">
         <div class="table-head-title">FICA / FUTA / SUTA Summary</div>
@@ -218,7 +239,9 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End pay-summary -->
 
+    <div id="pay-filing" class="sub-panel pay-panel" style="display:none;">
     <div class="table-wrap">
       <div class="table-head-row">
         <div class="table-head-title">Filing Status — Forms 940 / 941 / 944</div>
@@ -235,10 +258,18 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End pay-filing -->
   </div>
 
   <!-- ── 3. 1099 FILING & PRODUCER COMPLIANCE ── -->
   <div class="tab-panel" data-panel="filing1099">
+    <div class="pill-tabbar">
+      <button class="pill-tab active" onclick="switchSubTab('ten99-panel', 'ten99-thresh', this)">Threshold Monitoring</button>
+      <button class="pill-tab" onclick="switchSubTab('ten99-panel', 'ten99-w9', this)">W-9 Status</button>
+      <button class="pill-tab" onclick="switchSubTab('ten99-panel', 'ten99-efile', this)">e-Filing Queue</button>
+    </div>
+
+    <div id="ten99-thresh" class="sub-panel ten99-panel">
     <div class="tax-copy">
       Threshold monitoring covers 1099-NEC broker commissions (including <strong>HIT</strong>) and 1099-MISC service vendors against the $600 annual reporting threshold. Form 1096 summary is prepared automatically for batch e-filing through the IRS FIRE system.
     </div>
@@ -257,7 +288,9 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End ten99-thresh -->
 
+    <div id="ten99-w9" class="sub-panel ten99-panel" style="display:none;">
     <div class="table-wrap" style="margin-bottom:20px;">
       <div class="table-head-row">
         <div class="table-head-title">W-9 Collection &amp; Producer Verification Status</div>
@@ -287,7 +320,9 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End ten99-w9 -->
 
+    <div id="ten99-efile" class="sub-panel ten99-panel" style="display:none;">
     <div class="table-wrap">
       <div class="table-head-row">
         <div class="table-head-title">e-Filing Queue — IRS FIRE / Texas Surplus Lines (SLTX)</div>
@@ -302,6 +337,7 @@
         </tbody>
       </table>
     </div>
+    </div><!-- End ten99-efile -->
   </div>
 
   <!-- ── 4. CONSOLIDATED TAX LIABILITY SUMMARY ── -->
@@ -700,6 +736,15 @@
     render1099Tables();
     renderLiabilityTable();
   });
+</script>
+
+<script>
+function switchSubTab(panelClass, targetId, btn) {
+  document.querySelectorAll('.' + panelClass).forEach(el => el.style.display = 'none');
+  document.getElementById(targetId).style.display = 'block';
+  btn.closest('.pill-tabbar').querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
 </script>
 </body>
 </html>
