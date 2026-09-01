@@ -252,8 +252,8 @@ function initDocsLayout(activePageId) {
     topbar.innerHTML = `
       <div class="topbar-left">
         <a href="index.html" class="brand-logo">
-          <i class="fa-solid fa-shield-halved" style="color: var(--brand); font-size: 16px;"></i>
-          <span>Veridex Docs</span>
+          <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <span>VeriDex Docs</span>
           <span class="brand-badge">v1.6</span>
         </a>
       </div>
@@ -261,7 +261,7 @@ function initDocsLayout(activePageId) {
       <!-- Live Search -->
       <div class="search-box">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <input type="text" id="doc-search-input" class="search-input" placeholder="Search modules, GL accounts..." oninput="handleDocSearch(this.value)">
+        <input type="text" id="doc-search-input" class="search-input" placeholder="Search modules, GL accounts, DBA / DBM / DBC flows..." oninput="handleDocSearch(this.value)">
         <span class="search-kbd">Ctrl+K</span>
       </div>
 
@@ -272,7 +272,7 @@ function initDocsLayout(activePageId) {
         </a>
         <a href="../insurance-flow-simulator.html" class="nav-btn nav-btn-primary">
           <i class="fa-solid fa-play"></i>
-          <span>Open App</span>
+          <span>Live Simulator</span>
         </a>
       </div>
     `;
