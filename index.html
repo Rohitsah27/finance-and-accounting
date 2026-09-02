@@ -53,6 +53,10 @@
             <input type="checkbox" id="remember-me" style="width:16px;height:16px;accent-color:var(--color-brand);cursor:pointer;">
             <label for="remember-me" style="color:var(--color-muted);font-size:12px;cursor:pointer;margin:0;">Remember me for 30 days</label>
           </div>
+          <div class="auth-form-group" style="margin-top:8px;display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <input type="checkbox" id="skip-onboarding" style="width:16px;height:16px;accent-color:var(--color-brand);cursor:pointer;">
+            <label for="skip-onboarding" style="color:var(--color-muted);font-size:12px;cursor:pointer;margin:0;">Don't show onboarding screen (Go directly to dashboard)</label>
+          </div>
           <button type="submit" class="auth-btn">Sign In →</button>
         </form>
 
@@ -77,8 +81,10 @@
       }
 
       const rememberMe = document.getElementById('remember-me').checked;
+      const skipOnboarding = document.getElementById('skip-onboarding').checked;
       sessionStorage.setItem('login_email', email);
       sessionStorage.setItem('login_remember', rememberMe ? '1' : '0');
+      sessionStorage.setItem('skip_onboarding', skipOnboarding ? '1' : '0');
       window.location.href = 'otp.html';
     }
   </script>

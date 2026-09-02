@@ -129,6 +129,51 @@
       const activeConfig = cfg.entityConfigs?.[activeId] || {};
 
       if (!cfg.onboarded || activeConfig.onboarded === false) {
+        if (sessionStorage.getItem('skip_onboarding') === '1') {
+          const bType = cfg.businessType || 'mga';
+          const allGoals = goalsForBusinessType(bType);
+          const goalIds = allGoals.map(g => g.id);
+          
+          let companyName = 'My Business';
+          let businessLabel = 'Business';
+          let ownerName = user.name;
+          
+          if (bType === 'carrier') {
+            companyName = 'SOUTHLAKE';
+            businessLabel = 'Risk Carrier';
+            ownerName = 'SOUTHLAKE';
+          } else if (bType === 'mga') {
+            companyName = 'NTA';
+            businessLabel = 'MGA Operators';
+            ownerName = 'NTA';
+          } else if (bType === 'agency' || bType === 'broker') {
+            companyName = 'HIT';
+            businessLabel = 'Agency Operators';
+            ownerName = 'HIT';
+          } else if (bType === 'insured') {
+            companyName = 'Ayushi';
+            businessLabel = 'Insured Org';
+            ownerName = 'Ayushi';
+          }
+          
+          const templates = coaTemplatesForBusinessType(bType);
+          const coaTemplate = templates.length > 0 ? templates[0].id : 'COA-CORP-01';
+          
+          applyOnboarding({
+            businessType: bType,
+            goalIds: goalIds,
+            ownerName: ownerName,
+            companyName: companyName,
+            businessLabel: businessLabel,
+            coaTemplate: coaTemplate,
+            moduleOverrides: {},
+            dimensionOverrides: {}
+          }, 'done');
+          
+          window.location.href = 'home.html';
+          return;
+        }
+
         window.location.href = 'onboarding.html';
         return;
       }
