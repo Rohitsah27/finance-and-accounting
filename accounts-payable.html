@@ -850,7 +850,7 @@
         number: mgaNextNum,
         entityId: 'ENT-MINE',
         date: new Date().toISOString().split('T')[0],
-        status: 'posted',
+        status: 'draft',
         postedAt: new Date().toISOString(),
         createdBy: 'NTA Operations',
         description: `Broker premium settlement payment received from ${active ? active.name : 'HIT'} (${invoiceId}) for ${policyNum}`,
@@ -900,6 +900,32 @@
         amount: balance
       });
       localStorage.setItem('carrier_pas_bank_txns', JSON.stringify(Carrierbank));
+
+      // Post Carrier GL receipt entry into Carrier ledger
+      let carrierList = JSON.parse(localStorage.getItem('carrier_v_gl_journal_entries') || '[]');
+      let carrierNextNum = 'JE-' + new Date().getFullYear() + '-' + String(carrierList.length + 1).padStart(4, '0');
+      let carrierJE = {
+        id: 'JE-CAR-RECV-' + invoiceId,
+        number: carrierNextNum,
+        entityId: 'ENT-CAR-01',
+        date: new Date().toISOString().split('T')[0],
+        status: 'draft',
+        postedAt: new Date().toISOString(),
+        createdBy: 'Carrier Operations',
+        description: `MGA premium settlement payment received from ${mgaName} (${invoiceId}) for ${policyNum}`,
+        source: 'INSURANCE',
+        lines: [
+          { acct: '1001', debit: balance, credit: 0, desc: `MGA premium settlement receipt — ${mgaName}`, dims: { location: 'HQ' } },
+          { acct: '1100', debit: 0, credit: balance, desc: `Clear MGA Premium Receivable — ${mgaName}`, dims: { mga: mgaName, lob: 'Commercial Trucking' } }
+        ]
+      };
+      const existIdx2 = carrierList.findIndex(x => x.id === carrierJE.id || x.description === carrierJE.description);
+      if (existIdx2 === -1) {
+        carrierList.unshift(carrierJE);
+      } else {
+        carrierList[existIdx2] = Object.assign(carrierList[existIdx2], carrierJE);
+      }
+      localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carrierList));
     }
     
     showToast('Settlement disburse completed. Ledger updated.', 'success');

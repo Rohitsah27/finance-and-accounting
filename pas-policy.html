@@ -808,12 +808,8 @@
         source: 'INSURANCE',
         lines: brokerLines
       });
-      const postedBroker = submitJournalEntry(brokerJE.id);
-      if (postedBroker && postedBroker.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
-        approveJournalEntry(postedBroker.id);
-      }
       if (activeId === 'ENT-AGY-01' || activeId === 'ENT-BRK-01') {
-        activeResult = { jeId: postedBroker.id, jeNumber: postedBroker.number };
+        activeResult = { jeId: brokerJE.id, jeNumber: brokerJE.number };
       }
     }
 
@@ -825,12 +821,8 @@
         source: 'INSURANCE',
         lines: mgaLines
       });
-      const postedMga = submitJournalEntry(mgaJE.id);
-      if (postedMga && postedMga.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
-        approveJournalEntry(postedMga.id);
-      }
       if (activeId === 'ENT-MINE') {
-        activeResult = { jeId: postedMga.id, jeNumber: postedMga.number };
+        activeResult = { jeId: mgaJE.id, jeNumber: mgaJE.number };
       }
     }
 
@@ -842,12 +834,8 @@
         source: 'INSURANCE',
         lines: carrierLines
       });
-      const postedCarrier = submitJournalEntry(carrierJE.id);
-      if (postedCarrier && postedCarrier.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
-        approveJournalEntry(postedCarrier.id);
-      }
       if (activeId === 'ENT-CAR-01') {
-        activeResult = { jeId: postedCarrier.id, jeNumber: postedCarrier.number };
+        activeResult = { jeId: carrierJE.id, jeNumber: carrierJE.number };
       }
     }
 

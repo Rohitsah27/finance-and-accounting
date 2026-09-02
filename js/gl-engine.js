@@ -232,7 +232,7 @@ function sanitizeMGAJournalEntry(je) {
   const isCarrierDisburse = (je.description && (je.description.includes('Carrier') || je.description.includes('SOUTHLAKE') || je.description.includes('PAY-CAR')));
 
   if (isBindingOrInvoicing && !isPaymentReceipt && !isCarrierDisburse) {
-    je.status = 'posted';
+
     je.description = 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1';
     je.lines = [
       {
@@ -265,7 +265,7 @@ function sanitizeMGAJournalEntry(je) {
       }
     ];
   } else if (isPaymentReceipt) {
-    je.status = 'posted';
+
     je.description = 'Broker premium settlement payment received from HIT for POL-V8NHT';
     je.lines = [
       {
@@ -284,7 +284,7 @@ function sanitizeMGAJournalEntry(je) {
       }
     ];
   } else if (isCarrierDisburse) {
-    je.status = 'posted';
+
     je.description = 'Settlement disburse to Carrier: Southlake Insurance Co. (POL-V8NHT)';
     je.lines = [
       {
@@ -311,7 +311,7 @@ function getNextJournalNumber(entityId, existingList) {
   let maxSeq = 0;
   const list = existingList || [];
   list.forEach(j => {
-    if (j.number && j.number.startsWith('JE-' + currentYear + '-')) {
+    if ((!entityId || j.entityId === entityId) && j.number && j.number.startsWith('JE-' + currentYear + '-')) {
       const parts = j.number.split('-');
       const seq = parseInt(parts[2], 10);
       if (!isNaN(seq) && seq > maxSeq) {
@@ -359,16 +359,7 @@ function deduplicateJournalEntries(list) {
 function getJournalEntries() {
   let all = glLoad(GL_JE_KEY, null);
   if (!all) {
-    const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-    if (active && (active.businessType === 'mga' || active.businessType === 'agency' || active.businessType === 'broker')) {
-      all = [];
-    } else {
-      all = [
-        { id: 'JE-SEED-1', number: 'JE-2026-0048', status: 'posted', createdAt: '2026-05-21T09:00:00.000Z', postedAt: '2026-05-21T09:05:00.000Z', createdBy: 'System (seed)', description: 'Premium receipt, ACCL MGA May batch', lines: [{ acct: '1100', debit: 482500, credit: 0, desc: 'Premium receivable', dims: {} }, { acct: '4100', debit: 0, credit: 482500, desc: 'Net written premium', dims: {} }] },
-        { id: 'JE-SEED-2', number: 'JE-2026-0047', status: 'pending_approval', createdAt: '2026-05-20T09:00:00.000Z', submittedAt: '2026-05-20T09:05:00.000Z', createdBy: 'System (seed)', description: 'Claims payment, Motor LOB batch #12', lines: [{ acct: '5200', debit: 124200, credit: 0, desc: 'Claims expense', dims: {} }, { acct: '1001', debit: 0, credit: 124200, desc: 'Cash disbursement', dims: {} }] },
-        { id: 'JE-SEED-3', number: 'JE-2026-0046', status: 'posted', createdAt: '2026-05-19T09:00:00.000Z', postedAt: '2026-05-19T09:05:00.000Z', createdBy: 'System (seed)', description: 'Reinsurance cession, May QS treaty', lines: [{ acct: '1400', debit: 96400, credit: 0, desc: 'Reinsurance recoverable', dims: {} }, { acct: '5200', debit: 0, credit: 96400, desc: 'Claims expense offset', dims: {} }] },
-      ];
-    }
+    all = [];
     glSave(GL_JE_KEY, all);
   }
   
@@ -383,6 +374,11 @@ function getJournalEntries() {
         if (existingIdx === -1) {
           all.push(je);
           changed = true;
+        } else {
+          if (je.status === 'posted' || all[existingIdx].status !== 'posted') {
+            all[existingIdx] = je;
+            changed = true;
+          }
         }
       });
     }
@@ -399,8 +395,10 @@ function getJournalEntries() {
           all.push(sanitized);
           changed = true;
         } else {
-          all[existingIdx] = sanitized;
-          changed = true;
+          if (sanitized.status === 'posted' || all[existingIdx].status !== 'posted') {
+            all[existingIdx] = sanitized;
+            changed = true;
+          }
         }
       });
     }
@@ -416,8 +414,10 @@ function getJournalEntries() {
           all.push(je);
           changed = true;
         } else {
-          all[existingIdx] = je;
-          changed = true;
+          if (je.status === 'posted' || all[existingIdx].status !== 'posted') {
+            all[existingIdx] = je;
+            changed = true;
+          }
         }
       });
     }
@@ -437,7 +437,7 @@ function getJournalEntries() {
             number: getNextJournalNumber('ENT-AGY-01', all),
             entityId: 'ENT-AGY-01',
             date: inv.issueDate || '2026-08-20',
-            status: 'posted',
+            status: 'draft',
             postedAt: new Date().toISOString(),
             createdBy: 'HIT',
             description: `Settlement disburse to MGA: ${inv.customer || 'NTA'} (${inv.id})`,
@@ -479,7 +479,7 @@ function getJournalEntries() {
           number: getNextJournalNumber('ENT-MINE', all),
           entityId: 'ENT-MINE',
           date: '2026-08-20',
-          status: 'posted',
+          status: 'draft',
           postedAt: new Date().toISOString(),
           createdBy: 'NTA Operations',
           description: 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1',
@@ -512,7 +512,7 @@ function getJournalEntries() {
             number: getNextJournalNumber('ENT-MINE', all),
             entityId: 'ENT-MINE',
             date: '2026-08-20',
-            status: 'posted',
+            status: 'draft',
             postedAt: new Date().toISOString(),
             createdBy: 'NTA Operations',
             description: 'Broker premium settlement payment received from HIT for POL-V8NHT',
@@ -533,12 +533,74 @@ function getJournalEntries() {
           } catch (e) {}
         }
       }
+      // 3. Carrier Bordereau Ingestion Entry
+      const hasCarrierInvoiceJE = all.some(j => (j.entityId === 'ENT-CAR-01' || j.createdBy === 'Southlake' || j.createdBy === 'Carrier Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('Bordereau') || (j.description || '').includes('binding') || (j.description || '').includes('Ingestion'))));
+      if (!hasCarrierInvoiceJE) {
+        const carrierInvoiceJE = {
+          id: 'JE-CAR-BIND-V8NHT',
+          number: getNextJournalNumber('ENT-CAR-01', all),
+          entityId: 'ENT-CAR-01',
+          date: '2026-08-20',
+          status: 'draft',
+          postedAt: new Date().toISOString(),
+          createdBy: 'Carrier Operations',
+          description: 'MGA Bordereau Ingestion & Policy Binding for POL-V8NHT',
+          source: 'INSURANCE',
+          lines: [
+            { acct: '1100', debit: 29757.00, credit: 0, desc: 'Premium Receivable — NTA (Net to Carrier)', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+            { acct: '6100', debit: 2500.00, credit: 0, desc: 'Commission Expense — Broker', dims: { broker: 'HIT', lob: 'Commercial Trucking' } },
+            { acct: '6101', debit: 3500.00, credit: 0, desc: 'Commission Expense — MGA Override', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+            { acct: '4100', debit: 0, credit: 35757.00, desc: 'Written Premium Revenue', dims: { lob: 'Commercial Trucking' } }
+          ]
+        };
+        all.push(carrierInvoiceJE);
+        changed = true;
+        try {
+          let carList = JSON.parse(localStorage.getItem('carrier_v_gl_journal_entries') || '[]');
+          if (!carList.some(x => x.id === carrierInvoiceJE.id || x.description === carrierInvoiceJE.description)) {
+            carList.unshift(carrierInvoiceJE);
+            localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carList));
+          }
+        } catch (e) {}
+      }
+      
+      // 4. Carrier Settlement Receipt Entry if MGA paid
+      const mgaPaid = rawMgaInvoices && JSON.parse(rawMgaInvoices).some(inv => (inv.type === 'Carrier Settlement' || (inv.type && inv.type.includes('Carrier'))) && inv.status === 'Paid');
+      if (mgaPaid) {
+        const hasCarrierRecvJE = all.some(j => (j.entityId === 'ENT-CAR-01' || j.createdBy === 'Southlake' || j.createdBy === 'Carrier Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('received') || (j.description || '').includes('Settlement'))));
+        if (!hasCarrierRecvJE) {
+          const carrierRecvJE = {
+            id: 'JE-CAR-RECV-V8NHT',
+            number: getNextJournalNumber('ENT-CAR-01', all),
+            entityId: 'ENT-CAR-01',
+            date: '2026-08-20',
+            status: 'draft',
+            postedAt: new Date().toISOString(),
+            createdBy: 'Carrier Operations',
+            description: 'MGA premium settlement payment received from NTA (PAY-CAR-V8NHT) for POL-V8NHT',
+            source: 'INSURANCE',
+            lines: [
+              { acct: '1001', debit: 29757.00, credit: 0, desc: 'MGA premium settlement receipt — NTA', dims: { location: 'HQ' } },
+              { acct: '1100', debit: 0, credit: 29757.00, desc: 'Clear MGA Premium Receivable — NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
+            ]
+          };
+          all.push(carrierRecvJE);
+          changed = true;
+          try {
+            let carList = JSON.parse(localStorage.getItem('carrier_v_gl_journal_entries') || '[]');
+            if (!carList.some(x => x.id === carrierRecvJE.id || x.description === carrierRecvJE.description)) {
+              carList.unshift(carrierRecvJE);
+              localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carList));
+            }
+          } catch (e) {}
+        }
+      }
     }
   } catch (e) {}
 
   // Reclassify and sanitize broker and MGA entries
   all.forEach(je => {
-    if ((je.description || '').includes('Settlement disburse to MGA') || (je.description || '').includes('PAY-MGA-')) {
+    if ((je.description || '').includes('Settlement disburse to MGA') && !(je.description || '').includes('received')) {
       je.entityId = 'ENT-AGY-01';
       je.createdBy = 'HIT';
     }
@@ -719,25 +781,18 @@ function submitJournalEntry(id) {
   
   localStorage.setItem(match.dbKey, JSON.stringify(match.list));
   
-  // Also sync with the current active prefix if it matches
+  // Force sync to global ledger to guarantee UI updates
   try {
-    const prefix = typeof getUserPrefix === 'function' ? getUserPrefix() : '';
-    const currentDbKey = prefix ? (prefix + 'v_gl_journal_entries') : 'v_gl_journal_entries';
-    if (currentDbKey !== match.dbKey) {
-      const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-      if (active && je.entityId === active.id) {
-        let currentAll = [];
-        const currentRaw = localStorage.getItem(currentDbKey);
-        if (currentRaw) currentAll = JSON.parse(currentRaw);
-        const idx = currentAll.findIndex(j => j.id === id);
-        if (idx !== -1) {
-          currentAll[idx] = je;
-        } else {
-          currentAll.unshift(je);
-        }
-        localStorage.setItem(currentDbKey, JSON.stringify(currentAll));
-      }
+    let globalAll = [];
+    const globalRaw = localStorage.getItem('v_gl_journal_entries');
+    if (globalRaw) globalAll = JSON.parse(globalRaw);
+    const gIdx = globalAll.findIndex(j => j.id === id);
+    if (gIdx !== -1) {
+      globalAll[gIdx] = je;
+    } else {
+      globalAll.push(je);
     }
+    localStorage.setItem('v_gl_journal_entries', JSON.stringify(globalAll));
   } catch (e) {}
 
   return je;
@@ -754,23 +809,18 @@ function approveJournalEntry(id, approver) {
   
   localStorage.setItem(match.dbKey, JSON.stringify(match.list));
   
-  // Sync current screen if matches
+  // Force sync to global ledger to guarantee UI updates
   try {
-    const prefix = typeof getUserPrefix === 'function' ? getUserPrefix() : '';
-    const currentDbKey = prefix ? (prefix + 'v_gl_journal_entries') : 'v_gl_journal_entries';
-    if (currentDbKey !== match.dbKey) {
-      const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-      if (active && je.entityId === active.id) {
-        let currentAll = [];
-        const currentRaw = localStorage.getItem(currentDbKey);
-        if (currentRaw) currentAll = JSON.parse(currentRaw);
-        const idx = currentAll.findIndex(j => j.id === id);
-        if (idx !== -1) {
-          currentAll[idx] = je;
-          localStorage.setItem(currentDbKey, JSON.stringify(currentAll));
-        }
-      }
+    let globalAll = [];
+    const globalRaw = localStorage.getItem('v_gl_journal_entries');
+    if (globalRaw) globalAll = JSON.parse(globalRaw);
+    const gIdx = globalAll.findIndex(j => j.id === id);
+    if (gIdx !== -1) {
+      globalAll[gIdx] = je;
+    } else {
+      globalAll.push(je);
     }
+    localStorage.setItem('v_gl_journal_entries', JSON.stringify(globalAll));
   } catch (e) {}
 
   return je;
@@ -787,22 +837,18 @@ function rejectJournalEntry(id, reason) {
   
   localStorage.setItem(match.dbKey, JSON.stringify(match.list));
   
+  // Force sync to global ledger to guarantee UI updates
   try {
-    const prefix = typeof getUserPrefix === 'function' ? getUserPrefix() : '';
-    const currentDbKey = prefix ? (prefix + 'v_gl_journal_entries') : 'v_gl_journal_entries';
-    if (currentDbKey !== match.dbKey) {
-      const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-      if (active && je.entityId === active.id) {
-        let currentAll = [];
-        const currentRaw = localStorage.getItem(currentDbKey);
-        if (currentRaw) currentAll = JSON.parse(currentRaw);
-        const idx = currentAll.findIndex(j => j.id === id);
-        if (idx !== -1) {
-          currentAll[idx] = je;
-          localStorage.setItem(currentDbKey, JSON.stringify(currentAll));
-        }
-      }
+    let globalAll = [];
+    const globalRaw = localStorage.getItem('v_gl_journal_entries');
+    if (globalRaw) globalAll = JSON.parse(globalRaw);
+    const gIdx = globalAll.findIndex(j => j.id === id);
+    if (gIdx !== -1) {
+      globalAll[gIdx] = je;
+    } else {
+      globalAll.push(je);
     }
+    localStorage.setItem('v_gl_journal_entries', JSON.stringify(globalAll));
   } catch (e) {}
 
   return je;
@@ -831,27 +877,6 @@ function getJournalEntriesForActiveEntity() {
 
   filtered = deduplicateJournalEntries(filtered);
 
-  // If active is agency/broker and no entries exist yet, seed the default verified entry
-  if ((active.businessType === 'agency' || active.businessType === 'broker' || active.id === 'ENT-AGY-01') && filtered.length === 0) {
-    const defaultJE = {
-      id: 'JE-2026-0001',
-      number: 'JE-2026-0001',
-      entityId: 'ENT-AGY-01',
-      date: '2026-08-20',
-      status: 'draft',
-      createdAt: '2026-08-20T09:00:00.000Z',
-      createdBy: 'HIT',
-      description: 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1',
-      source: 'INSURANCE',
-      lines: [
-        { acct: '1100', debit: 39260.00, credit: 0, desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)', dims: { broker: 'HIT', mga: 'NTA', lob: 'Commercial Trucking' } },
-        { acct: '2200', debit: 0, credit: 36760.00, desc: 'Net Premium Payable — NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
-        { acct: '6100', debit: 0, credit: 2500.00, desc: 'Producer / Broker Commission Revenue', dims: { broker: 'HIT', lob: 'Commercial Trucking' } }
-      ]
-    };
-    createJournalEntry(defaultJE, 'draft');
-    return [defaultJE];
-  }
 
   return deduplicateJournalEntries(filtered.map(je => sanitizeMGAJournalEntry(sanitizeBrokerJournalEntry(je))));
 }
