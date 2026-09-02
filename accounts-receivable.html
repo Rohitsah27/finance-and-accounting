@@ -457,24 +457,58 @@
       localStorage.setItem(getARInvoicesKey(), JSON.stringify(invoices));
     }
     
+    // If Agency/Broker receiving money, ensure MGA Payable is created and ready in Accounts Payable
+    const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
+    const isAgency = active ? (active.businessType === 'agency' || active.businessType === 'broker' || active.id === 'ENT-AGY-01') : false;
+    if (isAgency) {
+      let agencyInvoices = JSON.parse(localStorage.getItem('agency_pas_invoices') || '[]');
+      let existingPay = agencyInvoices.find(i => i.policyNum === policyNum && (i.type === 'MGA Payable' || (i.type && i.type.includes('Payable'))));
+      if (!existingPay) {
+        // Gross minus estimated 8-10% or $2,500 commission
+        const commAmt = 2500;
+        const netToMGA = paid > commAmt ? (paid - commAmt) : (paid * 0.9);
+        agencyInvoices.unshift({
+          id: 'PAY-MGA-' + Math.floor(1000 + Math.random() * 9000),
+          policyNum: policyNum,
+          customer: 'NTA',
+          type: 'MGA Payable',
+          issueDate: today(),
+          dueDate: dueIn30Days(),
+          amount: netToMGA,
+          paidAmount: 0,
+          status: 'Approved',
+          category: 'MGA Settlement',
+          glAcct: '2200',
+          method: 'ACH'
+        });
+        localStorage.setItem('agency_pas_invoices', JSON.stringify(agencyInvoices));
+      }
+    }
+
     // Native GL Entry for Payment
     if (typeof createJournalEntry === 'function') {
       let je = createJournalEntry({
+        entityId: active ? active.id : undefined,
         description: 'Payment Receipt: ' + customerName + ' (' + invoiceId + ')',
         lines: [
-          { acct: '1001', debit: paid, credit: 0, desc: 'Premium receipt' },
-          { acct: '1100', debit: 0, credit: paid, desc: 'Clear AR balance' }
+          { acct: '1001', debit: paid, credit: 0, desc: 'Premium receipt — ' + customerName, dims: { location: 'HQ' } },
+          { acct: '1100', debit: 0, credit: paid, desc: 'Clear Premium Receivable — ' + customerName, dims: { broker: active ? active.name : 'HIT' } }
         ]
       });
-      submitJournalEntry(je.id);
+      const posted = submitJournalEntry(je.id);
+      if (posted && posted.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
+        approveJournalEntry(posted.id);
+      }
     }
     
-    let bankTxns = JSON.parse(localStorage.getItem('pas_bank_txns') || '[]');
+    const bankKey = (active ? active.businessType : 'mga') + '_pas_bank_txns';
+    let bankTxns = JSON.parse(localStorage.getItem(bankKey) || localStorage.getItem('pas_bank_txns') || '[]');
     bankTxns.unshift({
       date: new Date().toISOString().split('T')[0],
       desc: 'ACH Premium ' + customerName,
       amount: paid
     });
+    localStorage.setItem(bankKey, JSON.stringify(bankTxns));
     localStorage.setItem('pas_bank_txns', JSON.stringify(bankTxns));
     
     showToast('Payment of $' + paid.toLocaleString() + ' posted. Ledger updated.', 'success');

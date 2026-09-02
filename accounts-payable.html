@@ -399,8 +399,8 @@
 
   function getAPInvoices() {
     let stored = JSON.parse(localStorage.getItem(getAPInvoicesKey()) || '[]');
-    // Filter stored to show only payables (owed to Carriers)
-    stored = stored.filter(inv => inv.type === 'Carrier Payable');
+    // Filter stored to show only payables (owed to Carriers or MGAs)
+    stored = stored.filter(inv => inv.type === 'Carrier Payable' || inv.type === 'MGA Payable' || (inv.type && inv.type.toLowerCase().includes('payable')));
     
     // Resolve Carrier and MGA name dynamically
     let carrierName = getCarrierCompanyName();
@@ -408,22 +408,25 @@
 
     const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
     const isCarrier = active ? active.businessType === 'carrier' : false;
+    const isAgency = active ? (active.businessType === 'agency' || active.businessType === 'broker' || active.id === 'ENT-AGY-01') : false;
     const isOnboard = typeof isOnboarded === 'function' ? isOnboarded() : false;
 
     // Default static vendor payables
     const defaults = isOnboard ? [] : (isCarrier ? [
-      { id: 'PAY-RE-001', policyNum: 'POL-2026-0428', customer: 'Westfield Reinsurance', amount: 124500, paidAmount: 124500, status: 'Paid', issueDate: '05/12/2026', dueDate: '06/12/2026', category: 'Reinsurance Ceded', glAcct: '5500', method: 'E-Check' },
-      { id: 'PAY-RE-002', policyNum: 'POL-2026-1934', customer: 'Munich Re Ceded Claims', amount: 68200, paidAmount: 68200, status: 'Paid', issueDate: '05/20/2026', dueDate: '06/20/2026', category: 'Reinsurance Ceded', glAcct: '5500', method: 'E-Check' }
+      { id: 'PAY-RE-001', policyNum: 'POL-2026-0428', customer: 'Westfield Reinsurance', type: 'Carrier Payable', amount: 124500, paidAmount: 124500, status: 'Paid', issueDate: '05/12/2026', dueDate: '06/12/2026', category: 'Reinsurance Ceded', glAcct: '5500', method: 'E-Check' },
+      { id: 'PAY-RE-002', policyNum: 'POL-2026-1934', customer: 'Munich Re Ceded Claims', type: 'Carrier Payable', amount: 68200, paidAmount: 68200, status: 'Paid', issueDate: '05/20/2026', dueDate: '06/20/2026', category: 'Reinsurance Ceded', glAcct: '5500', method: 'E-Check' }
+    ] : (isAgency ? [
+      { id: 'PAY-MGA-NTA-1', policyNum: 'POL-V8NHT', customer: mgaName || 'NTA', type: 'MGA Payable', amount: 36760.00, paidAmount: 0, status: 'Approved', issueDate: '08/20/2026', dueDate: '09/19/2026', category: 'MGA Settlement', glAcct: '2200', method: 'ACH' }
     ] : [
-      { id: 'PAY-MGA-001', policyNum: 'POL-2026-0428', customer: carrierName, amount: 71621.00, paidAmount: 0, status: 'Approved', issueDate: '05/14/2026', dueDate: '06/14/2026', category: 'Carrier Settlement', glAcct: '2200', method: 'ACH' },
-      { id: 'PAY-MGA-002', policyNum: 'POL-2026-1934', customer: carrierName, amount: 41004.00, paidAmount: 0, status: 'Approved', issueDate: '05/13/2026', dueDate: '06/13/2026', category: 'Carrier Settlement', glAcct: '2200', method: 'ACH' },
-      { id: 'PAY-2026-0284', policyNum: 'POL-2026-0428', customer: 'Crawford & Co. Claims', amount: 84260, paidAmount: 0, status: 'Pending Approval', issueDate: '05/15/2026', dueDate: '06/14/2026', category: 'Claims LAE', glAcct: '5800', method: 'ACH' },
-      { id: 'PAY-2026-0283', policyNum: 'POL-2026-1934', customer: 'Baker McKenzie LLP', amount: 48240, paidAmount: 0, status: 'Pending Approval', issueDate: '05/14/2026', dueDate: '06/13/2026', category: 'Legal', glAcct: '6400', method: 'ACH' }
-    ]);
+      { id: 'PAY-MGA-001', policyNum: 'POL-2026-0428', customer: carrierName, type: 'Carrier Payable', amount: 71621.00, paidAmount: 0, status: 'Approved', issueDate: '05/14/2026', dueDate: '06/14/2026', category: 'Carrier Settlement', glAcct: '2200', method: 'ACH' },
+      { id: 'PAY-MGA-002', policyNum: 'POL-2026-1934', customer: carrierName, type: 'Carrier Payable', amount: 41004.00, paidAmount: 0, status: 'Approved', issueDate: '05/13/2026', dueDate: '06/13/2026', category: 'Carrier Settlement', glAcct: '2200', method: 'ACH' },
+      { id: 'PAY-2026-0284', policyNum: 'POL-2026-0428', customer: 'Crawford & Co. Claims', type: 'Carrier Payable', amount: 84260, paidAmount: 0, status: 'Pending Approval', issueDate: '05/15/2026', dueDate: '06/14/2026', category: 'Claims LAE', glAcct: '5800', method: 'ACH' },
+      { id: 'PAY-2026-0283', policyNum: 'POL-2026-1934', customer: 'Baker McKenzie LLP', type: 'Carrier Payable', amount: 48240, paidAmount: 0, status: 'Pending Approval', issueDate: '05/14/2026', dueDate: '06/13/2026', category: 'Legal', glAcct: '6400', method: 'ACH' }
+    ]));
     
     const merged = [...stored];
     defaults.forEach(d => {
-      if (!merged.some(m => m.id === d.id)) {
+      if (!merged.some(m => m.id === d.id || (m.policyNum === d.policyNum && m.type === d.type))) {
         merged.push(d);
       }
     });
@@ -776,72 +779,128 @@
   }
 
   function payAPInv(invoiceId, balance) {
-    if (!confirm('Disburse premium settlement payment of $' + balance.toLocaleString() + ' via ACH?')) return;
+    const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
+    const isAgency = active ? (active.businessType === 'agency' || active.businessType === 'broker' || active.id === 'ENT-AGY-01') : false;
+    const partnerType = isAgency ? 'MGA' : 'Carrier';
+
+    if (!confirm(`Disburse premium settlement payment of $${balance.toLocaleString()} to ${partnerType} via ACH?`)) return;
     
-    // 1. Update MGA Accounts Payable Invoice status
-    let MGAInvoices = JSON.parse(localStorage.getItem('mga_pas_invoices') || '[]');
-    let target = MGAInvoices.find(inv => inv.id === invoiceId);
+    // 1. Update current active Accounts Payable Invoice status
+    const currentKey = getAPInvoicesKey();
+    let currentInvoices = JSON.parse(localStorage.getItem(currentKey) || '[]');
+    let target = currentInvoices.find(inv => inv.id === invoiceId);
     let policyNum = target ? target.policyNum : 'POL-2026';
-    let partnerName = target ? target.customer : getCarrierCompanyName();
+    let partnerName = target ? target.customer : (isAgency ? 'NTA' : getCarrierCompanyName());
     let mgaName = getMgaCompanyName();
     
     if (target) {
       target.paidAmount = (target.paidAmount || 0) + balance;
       target.status = 'Paid';
-      localStorage.setItem('mga_pas_invoices', JSON.stringify(MGAInvoices));
+      localStorage.setItem(currentKey, JSON.stringify(currentInvoices));
     }
     
-    // 2. Post Disburse GL Entry to MGA Ledger
+    // 2. Post Disburse GL Entry to Current Ledger
     if (typeof createJournalEntry === 'function') {
       let je = createJournalEntry({
-        description: 'Settlement disburse to Carrier: ' + partnerName + ' (' + invoiceId + ')',
+        entityId: active ? active.id : undefined,
+        description: `Settlement disburse to ${partnerType}: ` + partnerName + ' (' + invoiceId + ')',
         lines: [
-          { acct: '2200', debit: balance, credit: 0, desc: 'Disburse clearing AP' },
+          { acct: '2200', debit: balance, credit: 0, desc: isAgency ? `Clear Net Premium Payable to ${partnerName}` : 'Disburse clearing AP' },
           { acct: '1001', debit: 0, credit: balance, desc: 'Settlement cash disburse' }
         ]
       });
-      submitJournalEntry(je.id);
+      const posted = submitJournalEntry(je.id);
+      if (posted && posted.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
+        approveJournalEntry(posted.id);
+      }
     }
     
-    // 3. Update Carrier Accounts Receivable Invoice status
-    // MGA is 'My Business (MGA)' or 'mga_v_tenant_config' name. We will search Carrier invoices by policyNum.
-    let CarrierInvoices = JSON.parse(localStorage.getItem('carrier_pas_invoices') || '[]');
-    let carrierTarget = CarrierInvoices.find(inv => inv.policyNum === policyNum && inv.status !== 'Paid');
-    if (carrierTarget) {
-      carrierTarget.paidAmount = carrierTarget.amount;
-      carrierTarget.status = 'Paid';
-      localStorage.setItem('carrier_pas_invoices', JSON.stringify(CarrierInvoices));
-    }
-    
-    // 4. Post Receipt GL Entry to Carrier Ledger
-    if (typeof createCarrierJournalEntryDirect === 'function') {
-      createCarrierJournalEntryDirect({
-        description: 'Settlement received from MGA: ' + mgaName + ' (' + policyNum + ')',
+    // 3. Update Intermediary & Bank records
+    if (isAgency) {
+      // Agency paying MGA
+      let MGAInvoices = JSON.parse(localStorage.getItem('mga_pas_invoices') || '[]');
+      let mgaTarget = MGAInvoices.find(inv => inv.policyNum === policyNum && (inv.type.includes('Premium') || inv.type === 'Commercial Trucking Premium'));
+      if (mgaTarget) {
+        mgaTarget.paidAmount = mgaTarget.amount;
+        mgaTarget.status = 'Paid';
+        localStorage.setItem('mga_pas_invoices', JSON.stringify(MGAInvoices));
+      }
+      
+      let agencyBank = JSON.parse(localStorage.getItem('agency_pas_bank_txns') || '[]');
+      agencyBank.unshift({
+        date: new Date().toISOString().split('T')[0],
+        desc: 'ACH MGA Net Remittance: ' + partnerName,
+        amount: -balance
+      });
+      localStorage.setItem('agency_pas_bank_txns', JSON.stringify(agencyBank));
+
+      let mgaBank = JSON.parse(localStorage.getItem('mga_pas_bank_txns') || '[]');
+      mgaBank.unshift({
+        date: new Date().toISOString().split('T')[0],
+        desc: 'ACH Broker Settlement Received: ' + (active ? active.name : 'HIT'),
+        amount: balance
+      });
+      localStorage.setItem('mga_pas_bank_txns', JSON.stringify(mgaBank));
+
+      // Post MGA Step 1.4 GL receipt entry into MGA ledger
+      let mgaList = JSON.parse(localStorage.getItem('mga_v_gl_journal_entries') || '[]');
+      let mgaNextNum = 'JE-' + new Date().getFullYear() + '-' + String(mgaList.length + 1).padStart(4, '0');
+      let mgaJE = {
+        id: 'JE-MGA-RECV-' + invoiceId,
+        number: mgaNextNum,
+        entityId: 'ENT-MINE',
+        date: new Date().toISOString().split('T')[0],
+        status: 'posted',
+        postedAt: new Date().toISOString(),
+        createdBy: 'NTA Operations',
+        description: `Broker premium settlement payment received from ${active ? active.name : 'HIT'} (${invoiceId}) for ${policyNum}`,
+        source: 'INSURANCE',
         lines: [
-          { acct: '1001', debit: balance, credit: 0, desc: 'Reconciled settlement receipt' },
-          { acct: '1100', debit: 0, credit: balance, desc: 'Reconciled MGA clearing AR' }
+          { acct: '1001', debit: balance, credit: 0, desc: `Broker premium settlement receipt — ${active ? active.name : 'HIT'}`, dims: { location: 'HQ' } },
+          { acct: '1100', debit: 0, credit: balance, desc: `Clear Broker Premium Receivable — ${active ? active.name : 'HIT'}`, dims: { broker: active ? active.name : 'HIT', lob: 'Commercial Trucking' } }
         ]
-      }, 'posted');
+      };
+      const existIdx = mgaList.findIndex(x => x.id === mgaJE.id || x.description === mgaJE.description);
+      if (existIdx === -1) {
+        mgaList.unshift(mgaJE);
+      } else {
+        mgaList[existIdx] = Object.assign(mgaList[existIdx], mgaJE);
+      }
+      localStorage.setItem('mga_v_gl_journal_entries', JSON.stringify(mgaList));
+    } else {
+      // MGA paying Carrier
+      let MGAInvoices = JSON.parse(localStorage.getItem('mga_pas_invoices') || '[]');
+      let mgaTarget = MGAInvoices.find(inv => inv.id === invoiceId);
+      if (mgaTarget) {
+        mgaTarget.paidAmount = (mgaTarget.paidAmount || 0) + balance;
+        mgaTarget.status = 'Paid';
+        localStorage.setItem('mga_pas_invoices', JSON.stringify(MGAInvoices));
+      }
+
+      let CarrierInvoices = JSON.parse(localStorage.getItem('carrier_pas_invoices') || '[]');
+      let carrierTarget = CarrierInvoices.find(inv => inv.policyNum === policyNum && inv.status !== 'Paid');
+      if (carrierTarget) {
+        carrierTarget.paidAmount = carrierTarget.amount;
+        carrierTarget.status = 'Paid';
+        localStorage.setItem('carrier_pas_invoices', JSON.stringify(CarrierInvoices));
+      }
+      
+      let MGAbank = JSON.parse(localStorage.getItem('mga_pas_bank_txns') || '[]');
+      MGAbank.unshift({
+        date: new Date().toISOString().split('T')[0],
+        desc: 'ACH Carrier Settlement: ' + partnerName,
+        amount: -balance
+      });
+      localStorage.setItem('mga_pas_bank_txns', JSON.stringify(MGAbank));
+      
+      let Carrierbank = JSON.parse(localStorage.getItem('carrier_pas_bank_txns') || '[]');
+      Carrierbank.unshift({
+        date: new Date().toISOString().split('T')[0],
+        desc: 'ACH MGA Settlement: ' + mgaName,
+        amount: balance
+      });
+      localStorage.setItem('carrier_pas_bank_txns', JSON.stringify(Carrierbank));
     }
-    
-    // 5. Add matching bank transactions for bank reconciliation matching
-    // MGA disburse (negative)
-    let MGAbank = JSON.parse(localStorage.getItem('mga_pas_bank_txns') || '[]');
-    MGAbank.unshift({
-      date: new Date().toISOString().split('T')[0],
-      desc: 'ACH Carrier Settlement: ' + partnerName,
-      amount: -balance
-    });
-    localStorage.setItem('mga_pas_bank_txns', JSON.stringify(MGAbank));
-    
-    // Carrier receipt (positive)
-    let Carrierbank = JSON.parse(localStorage.getItem('carrier_pas_bank_txns') || '[]');
-    Carrierbank.unshift({
-      date: new Date().toISOString().split('T')[0],
-      desc: 'ACH MGA Settlement: ' + mgaName,
-      amount: balance
-    });
-    localStorage.setItem('carrier_pas_bank_txns', JSON.stringify(Carrierbank));
     
     showToast('Settlement disburse completed. Ledger updated.', 'success');
     renderAP();

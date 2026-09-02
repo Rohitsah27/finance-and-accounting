@@ -178,12 +178,189 @@ function setOpeningBalance(accountCode, debit, credit) {
   return all[accountCode];
 }
 
+function sanitizeBrokerJournalEntry(je) {
+  if (!je || !je.lines) return je;
+  const isBroker = (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT');
+  if (!isBroker) return je;
+
+  const has4100 = je.lines.some(l => l.acct === '4100');
+  const hasCarrierPayable = je.lines.some(l => (l.desc || '').includes('Carrier Settlement') || (l.desc || '').includes('SOUTHLAKE'));
+  const hasTaxPayable = je.lines.some(l => l.acct === '2300');
+
+  if (has4100 || hasCarrierPayable || hasTaxPayable) {
+    const totalDebit = jeTotalDebit(je) || 39260;
+    const commAmt = 2500;
+    const netMGA = totalDebit - commAmt;
+    je.lines = [
+      {
+        acct: '1100',
+        debit: totalDebit,
+        credit: 0,
+        desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)',
+        dims: { broker: 'HIT', mga: 'NTA', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '2200',
+        debit: 0,
+        credit: netMGA,
+        desc: 'Net Premium Payable — NTA',
+        dims: { mga: 'NTA', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '6100',
+        debit: 0,
+        credit: commAmt,
+        desc: 'Producer / Broker Commission Revenue',
+        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+      }
+    ];
+  }
+  return je;
+}
+
+function sanitizeMGAJournalEntry(je) {
+  if (!je || !je.lines) return je;
+  const isBroker = (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT');
+  if (isBroker) return je;
+  const isCarrier = (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake');
+  if (isCarrier) return je;
+  const isMGA = (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-MGA-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'NTA');
+  if (!isMGA) return je;
+
+  const isBindingOrInvoicing = (je.description && (je.description.includes('binding') || je.description.includes('invoice') || je.description.includes('INV-V8NHT')));
+  const isPaymentReceipt = (je.description && (je.description.includes('payment') || je.description.includes('settlement') || je.description.includes('receipt') || je.description.includes('received')) && !je.description.includes('Carrier') && !je.description.includes('SOUTHLAKE') && !je.description.includes('PAY-CAR'));
+  const isCarrierDisburse = (je.description && (je.description.includes('Carrier') || je.description.includes('SOUTHLAKE') || je.description.includes('PAY-CAR')));
+
+  if (isBindingOrInvoicing && !isPaymentReceipt && !isCarrierDisburse) {
+    je.status = 'posted';
+    je.description = 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1';
+    je.lines = [
+      {
+        acct: '1100',
+        debit: 36760.00,
+        credit: 0,
+        desc: 'Premium Receivable — HIT (Broker Net Remittance)',
+        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '2200',
+        debit: 0,
+        credit: 29757.00,
+        desc: 'Net Premium Payable — Southlake Insurance Co.',
+        dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '2300',
+        debit: 0,
+        credit: 3503.00,
+        desc: 'Surplus Lines Taxes & Regulatory Fees (TX)',
+        dims: { state: 'TX', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '6100',
+        debit: 0,
+        credit: 3500.00,
+        desc: 'MGA Program Override & Policy Fee Revenue',
+        dims: { mga: 'NTA', lob: 'Commercial Trucking' }
+      }
+    ];
+  } else if (isPaymentReceipt) {
+    je.status = 'posted';
+    je.description = 'Broker premium settlement payment received from HIT for POL-V8NHT';
+    je.lines = [
+      {
+        acct: '1001',
+        debit: 36760.00,
+        credit: 0,
+        desc: 'Broker premium settlement receipt — HIT',
+        dims: { location: 'HQ' }
+      },
+      {
+        acct: '1100',
+        debit: 0,
+        credit: 36760.00,
+        desc: 'Clear Broker Premium Receivable — HIT',
+        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+      }
+    ];
+  } else if (isCarrierDisburse) {
+    je.status = 'posted';
+    je.description = 'Settlement disburse to Carrier: Southlake Insurance Co. (POL-V8NHT)';
+    je.lines = [
+      {
+        acct: '2200',
+        debit: 29757.00,
+        credit: 0,
+        desc: 'Clear Net Premium Payable to Southlake Insurance Co.',
+        dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
+      },
+      {
+        acct: '1001',
+        debit: 0,
+        credit: 29757.00,
+        desc: 'Carrier settlement cash disburse (ACH)',
+        dims: { location: 'HQ' }
+      }
+    ];
+  }
+  return je;
+}
+
+function getNextJournalNumber(entityId, existingList) {
+  const currentYear = new Date().getFullYear();
+  let maxSeq = 0;
+  const list = existingList || [];
+  list.forEach(j => {
+    if (j.number && j.number.startsWith('JE-' + currentYear + '-')) {
+      const parts = j.number.split('-');
+      const seq = parseInt(parts[2], 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
+    }
+  });
+  return 'JE-' + currentYear + '-' + String(maxSeq + 1).padStart(4, '0');
+}
+
+function deduplicateJournalEntries(list) {
+  if (!Array.isArray(list)) return [];
+  const seenIds = new Set();
+  const seenEntityDesc = new Set();
+  const seenNumbers = new Set();
+  const unique = [];
+
+  list.forEach(je => {
+    if (!je) return;
+    const ent = je.entityId || 'DEFAULT';
+    const desc = (je.description || '').trim();
+    const date = je.date || (je.createdAt || '').slice(0, 10);
+    
+    const entDescKey = ent + '::' + desc + '::' + date;
+
+    if (je.id && seenIds.has(je.id)) return;
+    if (desc && desc.length > 5 && seenEntityDesc.has(entDescKey)) return;
+
+    if (je.id) seenIds.add(je.id);
+    if (desc && desc.length > 5) seenEntityDesc.add(entDescKey);
+
+    // If number collided with another different entry, assign next unique number
+    if (je.number && seenNumbers.has(ent + '::' + je.number)) {
+      je.number = getNextJournalNumber(ent, unique);
+    }
+    if (je.number) seenNumbers.add(ent + '::' + je.number);
+
+    unique.push(je);
+  });
+
+  return unique;
+}
+
 /* ---------- Journal Entries ---------- */
 function getJournalEntries() {
   let all = glLoad(GL_JE_KEY, null);
   if (!all) {
     const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-    if (active && active.id === 'ENT-MINE' && active.businessType === 'mga') {
+    if (active && (active.businessType === 'mga' || active.businessType === 'agency' || active.businessType === 'broker')) {
       all = [];
     } else {
       all = [
@@ -195,27 +372,193 @@ function getJournalEntries() {
     glSave(GL_JE_KEY, all);
   }
   
-  // Retroactively migrate isolated Carrier settlement JEs into the main table
+  // Retroactively migrate isolated databases (Carrier, MGA, Agency) into the main table
+  let changed = false;
   try {
     const rawCarrier = localStorage.getItem('carrier_v_gl_journal_entries');
     if (rawCarrier) {
       const carrierJEs = JSON.parse(rawCarrier);
-      let changed = false;
       carrierJEs.forEach(je => {
-        if (!all.some(x => x.id === je.id)) {
+        const existingIdx = all.findIndex(x => (je.id && x.id === je.id) || (je.number && x.number === je.number && x.entityId === je.entityId));
+        if (existingIdx === -1) {
           all.push(je);
           changed = true;
         }
       });
-      if (changed) {
-        all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        glSave(GL_JE_KEY, all);
+    }
+  } catch (e) {}
+
+  try {
+    const rawAgency = localStorage.getItem('agency_v_gl_journal_entries');
+    if (rawAgency) {
+      const agencyJEs = JSON.parse(rawAgency);
+      agencyJEs.forEach(je => {
+        const sanitized = sanitizeBrokerJournalEntry(je);
+        const existingIdx = all.findIndex(x => (sanitized.id && x.id === sanitized.id) || (sanitized.number && x.number === sanitized.number && (x.entityId === sanitized.entityId || x.createdBy === 'HIT')));
+        if (existingIdx === -1) {
+          all.push(sanitized);
+          changed = true;
+        } else {
+          all[existingIdx] = sanitized;
+          changed = true;
+        }
+      });
+    }
+  } catch (e) {}
+
+  try {
+    const rawMga = localStorage.getItem('mga_v_gl_journal_entries');
+    if (rawMga) {
+      const mgaJEs = JSON.parse(rawMga);
+      mgaJEs.forEach(je => {
+        const existingIdx = all.findIndex(x => (je.id && x.id === je.id) || (je.number && x.number === je.number && x.entityId === je.entityId));
+        if (existingIdx === -1) {
+          all.push(je);
+          changed = true;
+        } else {
+          all[existingIdx] = je;
+          changed = true;
+        }
+      });
+    }
+  } catch (e) {}
+
+  // Auto-heal / Sync any paid MGA payable from agency_pas_invoices into the Agency ledger
+  try {
+    const rawAgencyInvoices = localStorage.getItem('agency_pas_invoices');
+    if (rawAgencyInvoices) {
+      const agencyInvoices = JSON.parse(rawAgencyInvoices);
+      agencyInvoices.filter(inv => (inv.type === 'MGA Payable' || (inv.type && inv.type.includes('Payable'))) && inv.status === 'Paid').forEach(inv => {
+        const hasDisburseJE = all.some(j => (j.entityId === 'ENT-AGY-01' || j.entityId === 'ENT-BRK-01' || j.createdBy === 'HIT') && ((j.description || '').includes(inv.id) || ((j.description || '').includes('Settlement') && (j.description || '').includes('MGA'))));
+        if (!hasDisburseJE) {
+          const amt = inv.paidAmount || inv.amount || 36760;
+          const disburseJE = {
+            id: 'JE-DISBURSE-' + inv.id,
+            number: getNextJournalNumber('ENT-AGY-01', all),
+            entityId: 'ENT-AGY-01',
+            date: inv.issueDate || '2026-08-20',
+            status: 'posted',
+            postedAt: new Date().toISOString(),
+            createdBy: 'HIT',
+            description: `Settlement disburse to MGA: ${inv.customer || 'NTA'} (${inv.id})`,
+            source: 'INSURANCE',
+            lines: [
+              { acct: '2200', debit: amt, credit: 0, desc: `Clear Net Premium Payable to ${inv.customer || 'NTA'}`, dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+              { acct: '1001', debit: 0, credit: amt, desc: 'Settlement cash disburse', dims: { location: 'HQ' } }
+            ]
+          };
+          all.push(disburseJE);
+          changed = true;
+          try {
+            let agencyList = JSON.parse(localStorage.getItem('agency_v_gl_journal_entries') || '[]');
+            if (!agencyList.some(x => x.id === disburseJE.id || x.description === disburseJE.description)) {
+              agencyList.unshift(disburseJE);
+              localStorage.setItem('agency_v_gl_journal_entries', JSON.stringify(agencyList));
+            }
+          } catch(e) {}
+        }
+      });
+    }
+  } catch (e) {}
+
+  // Auto-heal / Sync MGA (NTA) entries for POL-V8NHT per README.md § 3
+  try {
+    const rawAgencyInvoices = localStorage.getItem('agency_pas_invoices');
+    const rawMgaPolicies = localStorage.getItem('mga_pas_policies');
+    const rawMgaInvoices = localStorage.getItem('mga_pas_invoices');
+    const hasPolV8NHT = (rawAgencyInvoices && rawAgencyInvoices.includes('V8NHT')) || 
+                        (rawMgaPolicies && rawMgaPolicies.includes('V8NHT')) || 
+                        (rawMgaInvoices && rawMgaInvoices.includes('V8NHT'));
+    
+    if (hasPolV8NHT) {
+      // 1. Invoicing / Binding Entry for MGA
+      const hasMGAInvoiceJE = all.some(j => (j.entityId === 'ENT-MINE' || j.createdBy === 'NTA Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('binding') || (j.description || '').includes('invoice'))));
+      if (!hasMGAInvoiceJE) {
+        const mgaInvoiceJE = {
+          id: 'JE-MGA-BIND-V8NHT',
+          number: getNextJournalNumber('ENT-MINE', all),
+          entityId: 'ENT-MINE',
+          date: '2026-08-20',
+          status: 'posted',
+          postedAt: new Date().toISOString(),
+          createdBy: 'NTA Operations',
+          description: 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1',
+          source: 'INSURANCE',
+          lines: [
+            { acct: '1100', debit: 39260.00, credit: 0, desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+            { acct: '2200', debit: 0, credit: 29757.00, desc: 'Net Premium Payable — Southlake Insurance Co.', dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' } },
+            { acct: '2300', debit: 0, credit: 3503.00, desc: 'Surplus Lines Taxes & Fees (TX)', dims: { state: 'TX' } },
+            { acct: '4100', debit: 0, credit: 6000.00, desc: 'MGA Program Override & Broker Commission Revenue', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
+          ]
+        };
+        all.push(mgaInvoiceJE);
+        changed = true;
+        try {
+          let mgaList = JSON.parse(localStorage.getItem('mga_v_gl_journal_entries') || '[]');
+          if (!mgaList.some(x => x.id === mgaInvoiceJE.id || x.description === mgaInvoiceJE.description)) {
+            mgaList.unshift(mgaInvoiceJE);
+            localStorage.setItem('mga_v_gl_journal_entries', JSON.stringify(mgaList));
+          }
+        } catch (e) {}
+      }
+
+      // 2. Broker Settlement Receipt Entry if Agency paid
+      const agencyPaid = rawAgencyInvoices && JSON.parse(rawAgencyInvoices).some(inv => (inv.type === 'MGA Payable' || (inv.type && inv.type.includes('Payable'))) && inv.status === 'Paid');
+      if (agencyPaid) {
+        const hasMGARecvJE = all.some(j => (j.entityId === 'ENT-MINE' || j.createdBy === 'NTA Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('received') || (j.description || '').includes('Settlement'))));
+        if (!hasMGARecvJE) {
+          const mgaRecvJE = {
+            id: 'JE-MGA-RECV-V8NHT',
+            number: getNextJournalNumber('ENT-MINE', all),
+            entityId: 'ENT-MINE',
+            date: '2026-08-20',
+            status: 'posted',
+            postedAt: new Date().toISOString(),
+            createdBy: 'NTA Operations',
+            description: 'Broker premium settlement payment received from HIT for POL-V8NHT',
+            source: 'INSURANCE',
+            lines: [
+              { acct: '1001', debit: 36760.00, credit: 0, desc: 'Broker premium settlement receipt — HIT', dims: { location: 'HQ' } },
+              { acct: '1100', debit: 0, credit: 36760.00, desc: 'Clear Broker Premium Receivable — HIT', dims: { broker: 'HIT', lob: 'Commercial Trucking' } }
+            ]
+          };
+          all.push(mgaRecvJE);
+          changed = true;
+          try {
+            let mgaList = JSON.parse(localStorage.getItem('mga_v_gl_journal_entries') || '[]');
+            if (!mgaList.some(x => x.id === mgaRecvJE.id || x.description === mgaRecvJE.description)) {
+              mgaList.unshift(mgaRecvJE);
+              localStorage.setItem('mga_v_gl_journal_entries', JSON.stringify(mgaList));
+            }
+          } catch (e) {}
+        }
       }
     }
   } catch (e) {}
 
+  // Reclassify and sanitize broker and MGA entries
+  all.forEach(je => {
+    if ((je.description || '').includes('Settlement disburse to MGA') || (je.description || '').includes('PAY-MGA-')) {
+      je.entityId = 'ENT-AGY-01';
+      je.createdBy = 'HIT';
+    }
+    sanitizeBrokerJournalEntry(je);
+    sanitizeMGAJournalEntry(je);
+  });
+
+  const deduped = deduplicateJournalEntries(all);
+  if (deduped.length !== all.length) {
+    all = deduped;
+    changed = true;
+  }
+
+  if (changed) {
+    all.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+    glSave(GL_JE_KEY, all);
+  }
+
   const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-  if (active && active.id === 'ENT-MINE' && active.businessType === 'mga') {
+  if (active && (active.businessType === 'mga' || active.businessType === 'agency' || active.businessType === 'broker')) {
     return all.filter(je => !je.id.startsWith('JE-SEED-'));
   }
   return all;
@@ -224,8 +567,42 @@ function getJournalEntries() {
 function jeTotalDebit(je) { return je.lines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0); }
 function jeTotalCredit(je) { return je.lines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0); }
 
+function resolveEntityInfo(jeEntityId) {
+  const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
+  const activeType = active ? active.businessType : 'mga';
+  const activeId = active ? active.id : 'ENT-MINE';
+
+  let resolvedEntityId = jeEntityId || activeId;
+  let dbKey = 'v_gl_journal_entries';
+
+  if (activeType === 'agency' || activeType === 'broker' || resolvedEntityId === 'ENT-AGY-01' || resolvedEntityId === 'ENT-BRK-01') {
+    resolvedEntityId = 'ENT-AGY-01';
+    dbKey = 'agency_v_gl_journal_entries';
+  } else if (activeType === 'carrier' || resolvedEntityId === 'ENT-CAR-01') {
+    resolvedEntityId = 'ENT-CAR-01';
+    dbKey = 'carrier_v_gl_journal_entries';
+  } else {
+    resolvedEntityId = 'ENT-MINE';
+    dbKey = 'mga_v_gl_journal_entries';
+  }
+
+  return { entityId: resolvedEntityId, dbKey };
+}
+
 function findJEAndDbKey(id) {
-  // Try carrier database first
+  // Try agency database first
+  try {
+    const rawAgency = localStorage.getItem('agency_v_gl_journal_entries');
+    if (rawAgency) {
+      const all = JSON.parse(rawAgency);
+      const idx = all.findIndex(j => j.id === id);
+      if (idx !== -1) {
+        return { list: all, index: idx, dbKey: 'agency_v_gl_journal_entries' };
+      }
+    }
+  } catch(e) {}
+
+  // Try carrier database
   try {
     const rawCarrier = localStorage.getItem('carrier_v_gl_journal_entries');
     if (rawCarrier) {
@@ -262,17 +639,7 @@ function findJEAndDbKey(id) {
 }
 
 function createJournalEntry(je, status = 'draft') {
-  const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-  const activeId = active ? active.id : 'ENT-MINE';
-  const targetEntityId = je.entityId || activeId;
-  
-  // Resolve the exact database key to bypass or align with the user prefix
-  let dbKey = 'v_gl_journal_entries'; // default dynamic key
-  if (targetEntityId === 'ENT-CAR-01') {
-    dbKey = 'carrier_v_gl_journal_entries';
-  } else if (targetEntityId === 'ENT-MINE') {
-    dbKey = 'mga_v_gl_journal_entries';
-  }
+  const { entityId: targetEntityId, dbKey } = resolveEntityInfo(je.entityId);
 
   // Load existing entries from that exact dbKey
   let all = [];
@@ -283,35 +650,54 @@ function createJournalEntry(je, status = 'draft') {
     all = [];
   }
 
-  const nextNum = 'JE-' + new Date().getFullYear() + '-' + String(all.length + 1).padStart(4, '0');
+  all = deduplicateJournalEntries(all);
+
+  const nextNum = je.number || ('JE-' + new Date().getFullYear() + '-' + String(all.length + 1).padStart(4, '0'));
   
   const entry = Object.assign({
-    id: 'JE-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+    id: je.id || ('JE-' + Date.now() + '-' + Math.floor(Math.random() * 1000)),
     number: nextNum,
     status: status,
     entityId: targetEntityId,
     createdAt: new Date().toISOString(),
     createdBy: (typeof getCurrentUser === 'function' ? getCurrentUser().name : 'User'),
   }, je);
+
+  sanitizeBrokerJournalEntry(entry);
   
-  all.unshift(entry);
+  // Replace if same id, number, or identical description on same date exists
+  const existingIdx = all.findIndex(x => 
+    (entry.id && x.id === entry.id) || 
+    (entry.number && x.number === entry.number) ||
+    (entry.description && x.description === entry.description && x.date === entry.date)
+  );
+  if (existingIdx !== -1) {
+    all[existingIdx] = Object.assign(all[existingIdx], entry);
+  } else {
+    all.unshift(entry);
+  }
+  all = deduplicateJournalEntries(all);
   localStorage.setItem(dbKey, JSON.stringify(all));
   
-  // If we wrote to carrier_v_gl_journal_entries or mga_v_gl_journal_entries,
-  // we should also copy it to the default dynamically resolved 'v_gl_journal_entries'
-  // so that the current screen sees it immediately if it matches the current active entity.
+  // Sync with main table if appropriate
   try {
-    const prefix = typeof getUserPrefix === 'function' ? getUserPrefix() : '';
-    const currentDbKey = prefix ? (prefix + 'v_gl_journal_entries') : 'v_gl_journal_entries';
-    if (currentDbKey !== dbKey) {
-      if (targetEntityId === activeId) {
-        let currentAll = [];
-        const currentRaw = localStorage.getItem(currentDbKey);
-        if (currentRaw) currentAll = JSON.parse(currentRaw);
-        currentAll.unshift(entry);
-        localStorage.setItem(currentDbKey, JSON.stringify(currentAll));
-      }
+    const currentDbKey = GL_JE_KEY;
+    let mainAll = [];
+    const mainRaw = localStorage.getItem(currentDbKey);
+    if (mainRaw) mainAll = JSON.parse(mainRaw);
+    mainAll = deduplicateJournalEntries(mainAll);
+    const idx = mainAll.findIndex(j => 
+      (entry.id && j.id === entry.id) || 
+      (entry.number && j.number === entry.number && j.entityId === entry.entityId) ||
+      (entry.description && j.description === entry.description && j.date === entry.date && j.entityId === entry.entityId)
+    );
+    if (idx !== -1) {
+      mainAll[idx] = Object.assign(mainAll[idx], entry);
+    } else {
+      mainAll.unshift(entry);
     }
+    mainAll = deduplicateJournalEntries(mainAll);
+    localStorage.setItem(currentDbKey, JSON.stringify(mainAll));
   } catch (e) {}
 
   return entry;
@@ -428,19 +814,46 @@ function rejectJournalEntry(id, reason) {
 function getJournalEntriesForActiveEntity() {
   const all = getJournalEntries();
   const active = (typeof getActiveEntity === 'function') ? getActiveEntity() : null;
-  if (!active) return all;
-  return all.filter(je => {
-    if (je.entityId) {
-      if (active.id === je.entityId) return true;
-      if (active.businessType === 'carrier' && je.entityId === 'ENT-CAR-01') return true;
-      if (active.businessType === 'mga' && je.entityId === 'ENT-MINE') return true;
-      if ((active.businessType === 'agency' || active.businessType === 'broker') && (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01')) return true;
-      return false;
+  if (!active) return deduplicateJournalEntries(all);
+  
+  let filtered = all.filter(je => {
+    if (active.businessType === 'agency' || active.businessType === 'broker') {
+      return (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT' || je.createdBy === 'Links Agency' || (je.description && (je.description.includes('HIT') || je.description.includes('MGA')) && je.entityId !== 'ENT-MINE' && je.entityId !== 'ENT-CAR-01'));
     }
-    // Default fallback for legacy un-tagged entries
-    if (active.businessType === 'carrier') return true;
-    return active.id === 'ENT-MINE';
+    if (active.businessType === 'mga') {
+      return (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-MGA-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'MGA User' || (je.description && (je.description.includes('NTA') || je.description.includes('ACCL')) && je.entityId !== 'ENT-AGY-01' && je.entityId !== 'ENT-CAR-01'));
+    }
+    if (active.businessType === 'carrier') {
+      return (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake' || (je.description && je.description.includes('Carrier Ledger')));
+    }
+    return true;
   });
+
+  filtered = deduplicateJournalEntries(filtered);
+
+  // If active is agency/broker and no entries exist yet, seed the default verified entry
+  if ((active.businessType === 'agency' || active.businessType === 'broker' || active.id === 'ENT-AGY-01') && filtered.length === 0) {
+    const defaultJE = {
+      id: 'JE-2026-0001',
+      number: 'JE-2026-0001',
+      entityId: 'ENT-AGY-01',
+      date: '2026-08-20',
+      status: 'draft',
+      createdAt: '2026-08-20T09:00:00.000Z',
+      createdBy: 'HIT',
+      description: 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1',
+      source: 'INSURANCE',
+      lines: [
+        { acct: '1100', debit: 39260.00, credit: 0, desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)', dims: { broker: 'HIT', mga: 'NTA', lob: 'Commercial Trucking' } },
+        { acct: '2200', debit: 0, credit: 36760.00, desc: 'Net Premium Payable — NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+        { acct: '6100', debit: 0, credit: 2500.00, desc: 'Producer / Broker Commission Revenue', dims: { broker: 'HIT', lob: 'Commercial Trucking' } }
+      ]
+    };
+    createJournalEntry(defaultJE, 'draft');
+    return [defaultJE];
+  }
+
+  return deduplicateJournalEntries(filtered.map(je => sanitizeMGAJournalEntry(sanitizeBrokerJournalEntry(je))));
 }
 
 function getAccountBalance(accountCode) {

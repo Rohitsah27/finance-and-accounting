@@ -101,6 +101,11 @@ function formatCleanLineDesc(desc) {
   const map = {
     'Premium AR': 'Premium Receivable',
     'Net Carrier Payable': 'Net Carrier Settlement Payable',
+    'Net MGA Payable': 'Net Premium Payable — MGA',
+    'Net Premium Payable — NTA': 'Net Premium Payable — NTA',
+    'Net Premium Payable — MGA': 'Net Premium Payable — MGA',
+    'Producer / Broker Commission Revenue': 'Producer / Broker Commission Revenue',
+    'Broker Commission Revenue': 'Broker Commission Revenue',
     'Premium Taxes & Fees Payable (TX)': 'Surplus Lines Taxes & Regulatory Fees (TX)',
     'MGA Comm. & Producer Revenue': 'MGA Override & Producer Commission Revenue',
     'Broker/Producer Commission Expense': 'Producer Commission Expense',
@@ -153,9 +158,19 @@ function openJournalEntryModal(jeId) {
       `</div>`;
   };
 
+  const getAccountDisplay = (acctCode, jeEntity) => {
+    const a = (typeof findGLAccountByCode === 'function') ? findGLAccountByCode(acctCode) : null;
+    if (!a) return acctCode;
+    if (acctCode === '6100') {
+      const isBroker = jeEntity === 'ENT-AGY-01' || jeEntity === 'ENT-BRK-01' || (typeof getActiveEntity === 'function' && getActiveEntity() && (getActiveEntity().businessType === 'agency' || getActiveEntity().businessType === 'broker'));
+      return acctCode + ' - ' + (isBroker ? 'Commission Revenue' : a.name);
+    }
+    return acctCode + ' - ' + a.name;
+  };
+
   const linesHtml = je.lines.map(l => `
     <tr>
-      <td style="font-weight:600; color:var(--navy);">${l.acct}${(typeof findGLAccountByCode === 'function' && findGLAccountByCode(l.acct)) ? ' - ' + findGLAccountByCode(l.acct).name : ''}</td>
+      <td style="font-weight:600; color:var(--navy);">${getAccountDisplay(l.acct, je.entityId)}</td>
       <td>
         <div style="font-size:12.5px; color:var(--gray-800);">${formatCleanLineDesc(l.desc || '')}</div>
         ${dimBits(l)}
