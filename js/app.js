@@ -630,9 +630,10 @@ function renderImportResultBanner(uploadTypeId) {
 
 /* ---------- Number Formatting ---------- */
 function fmtCurrency(val, symbol = '$') {
-  return symbol + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return symbol + Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-function fmtNumber(val) { return Number(val).toLocaleString('en-US'); }
+function fmtNumber(val) { return Number(val || 0).toLocaleString('en-US'); }
+function fmtLakhCrore(val) { return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function today() { return new Date().toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
 
 /* ---------- Authentication & Logout ---------- */

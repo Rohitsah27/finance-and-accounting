@@ -357,7 +357,7 @@
     const isOnboard = typeof isOnboarded === 'function' ? isOnboarded() : false;
 
     const defaults = isOnboard ? [] : (isCarrier ? [
-      { id: 'INV-V8NHT-1', policyNum: 'POL-V8NHT', customer: 'NTA', type: 'Commercial Trucking Premium', amount: 32257.00, paidAmount: 0, status: 'Sent', issueDate: '08/20/2026', dueDate: '09/19/2026' },
+      { id: 'INV-V8NHT-1', policyNum: 'POL-V8NHT', customer: 'NTA', type: 'Commercial Trucking Premium', amount: 29757.00, paidAmount: 0, status: 'Sent', issueDate: '08/20/2026', dueDate: '09/19/2026' },
       { id: 'REC-MGA-001', policyNum: 'POL-2026-0428', customer: mgaName, type: 'Premium', amount: 71621.00, paidAmount: 0, status: 'Sent', issueDate: '05/14/2026', dueDate: '06/14/2026' },
       { id: 'REC-MGA-002', policyNum: 'POL-2026-1934', customer: mgaName, type: 'Premium', amount: 41004.00, paidAmount: 0, status: 'Sent', issueDate: '05/13/2026', dueDate: '06/13/2026' }
     ] : [
@@ -487,18 +487,14 @@
 
     // Native GL Entry for Payment
     if (typeof createJournalEntry === 'function') {
-      let je = createJournalEntry({
+      createJournalEntry({
         entityId: active ? active.id : undefined,
         description: 'Payment Receipt: ' + customerName + ' (' + invoiceId + ')',
         lines: [
           { acct: '1001', debit: paid, credit: 0, desc: 'Premium receipt — ' + customerName, dims: { location: 'HQ' } },
           { acct: '1100', debit: 0, credit: paid, desc: 'Clear Premium Receivable — ' + customerName, dims: { broker: active ? active.name : 'HIT' } }
         ]
-      });
-      const posted = submitJournalEntry(je.id);
-      if (posted && posted.status === 'pending_approval' && typeof approveJournalEntry === 'function') {
-        approveJournalEntry(posted.id);
-      }
+      }, 'draft');
     }
     
     const bankKey = (active ? active.businessType : 'mga') + '_pas_bank_txns';

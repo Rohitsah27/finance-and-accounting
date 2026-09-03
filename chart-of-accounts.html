@@ -142,7 +142,7 @@
     initLayout('chart-of-accounts');
     renderImportResultBanner('coa');
 
-    const GROUP_BADGE = { asset: 'badge-navy', liability: 'badge-blue', equity: 'badge-gray', revenue: 'badge-green', expense: 'badge-orange' };
+    const GROUP_BADGE = { asset: 'badge-asset', liability: 'badge-liability', equity: 'badge-equity', revenue: 'badge-revenue', expense: 'badge-expense' };
 
     function toggleAddAccountForm() {
       const wrap = document.getElementById('add-account-form-wrap');
@@ -228,6 +228,7 @@
       const typeFilter = document.getElementById('coa-filter-type').value;
       const statusFilter = document.getElementById('coa-filter-status').value;
       let accts = getGLAccounts();
+      accts.sort((a, b) => (parseInt(a.code, 10) || 0) - (parseInt(b.code, 10) || 0));
       if (typeFilter) accts = accts.filter(a => a.group === typeFilter);
       if (statusFilter) accts = accts.filter(a => a.status === statusFilter);
       const dimLabelById = {};

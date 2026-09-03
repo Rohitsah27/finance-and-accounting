@@ -112,7 +112,7 @@ function generateJEPreviewFromUpload(record) {
   const SEED_ROWS = [
     { account_code: '1100', description: 'Premium receipt - ' + record.fileName, mga: 'FUT - Futuristic', state: 'TX', lob: 'Auto', debit: 48250, credit: 0 },
     { account_code: '2100', description: 'Unearned premium set-up - ' + record.fileName, mga: 'FUT - Futuristic', state: 'TX', lob: 'Auto', debit: 0, credit: 48250 },
-    { account_code: '6100', description: 'Commission accrual - ' + record.fileName, mga: 'NTA', state: 'CA', lob: 'Property', debit: 3200, credit: 0 },
+    { account_code: '5100', description: 'Commission accrual - ' + record.fileName, mga: 'NTA', state: 'CA', lob: 'Property', debit: 3200, credit: 0 },
     { account_code: '1001', description: 'Cash settlement - ' + record.fileName, mga: 'NTA', state: 'CA', lob: 'Property', debit: 0, credit: 3200 },
   ];
   generatedJELines = SEED_ROWS;
@@ -159,6 +159,19 @@ function postGeneratedJE() {
 const JE_STATUS_BADGE = { posted: 'badge-green', pending_approval: 'badge-orange', rejected: 'badge-red', draft: 'badge-gray' };
 const JE_STATUS_LABEL = { posted: 'Posted', pending_approval: 'Pending Approval', rejected: 'Rejected', draft: 'Draft' };
 
+function postJournalEntryDirectly(id) {
+  if (typeof approveJournalEntry === 'function') {
+    const res = approveJournalEntry(id);
+    if (res) {
+      showToast(`${res.number} posted to ledger`, 'success');
+      if (typeof renderRecentJE === 'function') renderRecentJE();
+      if (typeof renderAll === 'function') renderAll();
+      return;
+    }
+  }
+  openJournalEntryModal(id);
+}
+
 function renderRecentJE() {
   const tbody = document.getElementById('recent-je-tbody');
   if (!tbody) return;
@@ -167,6 +180,12 @@ function renderRecentJE() {
     const debit = jeTotalDebit(je), credit = jeTotalCredit(je);
     const dateVal = je.date || je.createdAt.slice(0, 10);
     const cleanDesc = typeof formatCleanJeDescription === 'function' ? formatCleanJeDescription(je.description) : je.description;
+    const actionBtn = je.status === 'draft' 
+      ? `<button type="button" class="btn btn-primary btn-sm" onclick="postJournalEntryDirectly('${je.id}')" style="padding:2px 12px;font-size:11.5px;font-weight:600;">Post</button>`
+      : (je.status === 'pending_approval' 
+          ? `<button type="button" class="btn btn-ghost btn-sm" onclick="openJournalEntryModal('${je.id}')">Review</button>`
+          : `<button type="button" class="btn btn-ghost btn-sm" onclick="openJournalEntryModal('${je.id}')">View</button>`);
+
     return `<tr>
       <td><input type="checkbox" class="table-check"></td>
       <td class="cell-link" style="cursor:pointer;" onclick="openJournalEntryModal('${je.id}')">${je.number}</td>
@@ -175,7 +194,7 @@ function renderRecentJE() {
       <td>${debit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
       <td>${credit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
       <td><span class="badge ${JE_STATUS_BADGE[je.status] || 'badge-gray'}">${JE_STATUS_LABEL[je.status] || je.status}</span></td>
-      <td><button type="button" class="btn btn-ghost btn-sm" onclick="openJournalEntryModal('${je.id}')">${je.status === 'pending_approval' ? 'Review' : (je.status === 'draft' ? 'Post' : 'View')}</button></td>
+      <td>${actionBtn}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:20px;">No journal entries yet.</td></tr>';
   initTableSelection('recent-je-table');

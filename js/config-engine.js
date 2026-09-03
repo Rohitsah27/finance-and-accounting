@@ -95,20 +95,31 @@ const DIMENSION_VALUE_OPTIONS = {
 
 /* ---------- Account Master: which dimensions apply to which account (drives JE dimension UI) ---------- */
 const ACCOUNT_MASTER = [
+  // 1100 Series: ASSETS
+  { code: '1001', name: 'Cash / Bank',                group: 'asset',     dimensions: ['cost-center', 'location'] },
   { code: '1100', name: 'Premium Receivable',        group: 'asset',     dimensions: ['mga', 'broker', 'state', 'lob', 'cost-center'] },
+  { code: '1400', name: 'Reinsurance Recoverable',   group: 'asset',     dimensions: ['treaty', 'reinsurer', 'lob'] },
+  { code: '1500', name: 'Raw Material Inventory',    group: 'asset',     dimensions: ['cost-center', 'product-line', 'location'] },
+
+  // 2100 Series: LIABILITIES
   { code: '2100', name: 'Unearned Premium',          group: 'liability', dimensions: ['mga', 'broker', 'state', 'lob'] },
   { code: '2200', name: 'Premium Payable',           group: 'liability', dimensions: ['mga', 'broker', 'cost-center'] },
   { code: '2300', name: 'Premium Taxes Payable',     group: 'liability', dimensions: ['state'] },
   { code: '2400', name: 'IBNR Reserve',              group: 'liability', dimensions: ['lob', 'state'] },
-  { code: '1400', name: 'Reinsurance Recoverable',   group: 'asset',     dimensions: ['treaty', 'reinsurer', 'lob'] },
-  { code: '6100', name: 'Commission Expense / Revenue', group: 'expense',   dimensions: ['mga', 'broker', 'cost-center', 'lob'] },
-  { code: '6101', name: 'Commission Expense — MGA Override', group: 'expense', dimensions: ['mga', 'cost-center', 'lob'] },
-  { code: '5200', name: 'Claims Expense',            group: 'expense',   dimensions: ['lob', 'state', 'carrier-dim'] },
-  { code: '1001', name: 'Cash / Bank',                group: 'asset',     dimensions: ['cost-center', 'location'] },
+
+  // 3100 Series: EQUITY
+  { code: '3100', name: 'Retained Earnings',         group: 'equity',    dimensions: ['cost-center'] },
+  { code: '3200', name: 'Common Stock / Capital Surplus', group: 'equity', dimensions: ['cost-center'] },
+
+  // 4100 Series: REVENUE
   { code: '4100', name: 'Net Written Premium',       group: 'revenue',   dimensions: ['mga', 'broker', 'state', 'lob', 'carrier-dim'] },
-  { code: '5000', name: 'Raw Material Inventory',    group: 'asset',     dimensions: ['cost-center', 'product-line', 'location'] },
-  { code: '6500', name: 'Payroll Expense',           group: 'expense',   dimensions: ['cost-center', 'location'] },
   { code: '4500', name: 'Sales Revenue',              group: 'revenue',   dimensions: ['class', 'location', 'customer-job', 'product-line'] },
+
+  // 5100 Series: EXPENSES
+  { code: '5100', name: 'Commission Expense / Revenue', group: 'expense',   dimensions: ['mga', 'broker', 'cost-center', 'lob'] },
+  { code: '5101', name: 'Commission Expense — MGA Override', group: 'expense', dimensions: ['mga', 'cost-center', 'lob'] },
+  { code: '5200', name: 'Claims Expense',            group: 'expense',   dimensions: ['lob', 'state', 'carrier-dim'] },
+  { code: '5500', name: 'Payroll Expense',           group: 'expense',   dimensions: ['cost-center', 'location'] },
 ];
 
 function lookupAccount(codeOrName) {

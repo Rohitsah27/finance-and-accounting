@@ -1017,7 +1017,43 @@
     '100101 - Chase Commercial Operating Account': '****4821',
     '100102 - Wells Fargo Premium Trust Account': '****5502',
     '100103 - SOUTHLAKE Claims Clearing Account': '****7734',
+    '100101 - First Republic Operating Account': '****2109',
+    '100102 - First Republic Premium Trust Account': '****2110',
+    '100101 - BNY Mellon Premium Clearing Account': '****9901',
+    '100102 - JPMorgan Statutory Reserve Account': '****9902'
   };
+
+  function syncBankEntityOptions() {
+    const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
+    const bType = active ? active.businessType : 'mga';
+    const isBroker = (bType === 'agency' || bType === 'broker');
+    const isCarrier = (bType === 'carrier');
+    
+    const bankSel = document.querySelector('#recon-listing select.form-ctrl');
+    const acctInput = document.getElementById('recon-account-no');
+    if (!bankSel) return;
+    
+    if (isBroker) {
+      bankSel.innerHTML = `
+        <option value="100101 - First Republic Operating Account">100101 - First Republic Operating Account</option>
+        <option value="100102 - First Republic Premium Trust Account">100102 - First Republic Premium Trust Account</option>
+      `;
+      if (acctInput) acctInput.value = '****2109';
+    } else if (isCarrier) {
+      bankSel.innerHTML = `
+        <option value="100101 - BNY Mellon Premium Clearing Account">100101 - BNY Mellon Premium Clearing Account</option>
+        <option value="100102 - JPMorgan Statutory Reserve Account">100102 - JPMorgan Statutory Reserve Account</option>
+      `;
+      if (acctInput) acctInput.value = '****9901';
+    } else {
+      bankSel.innerHTML = `
+        <option value="100101 - Chase Commercial Operating Account">100101 - Chase Commercial Operating Account</option>
+        <option value="100102 - Wells Fargo Premium Trust Account">100102 - Wells Fargo Premium Trust Account</option>
+        <option value="100103 - SOUTHLAKE Claims Clearing Account">100103 - SOUTHLAKE Claims Clearing Account</option>
+      `;
+      if (acctInput) acctInput.value = '****4821';
+    }
+  }
 
   function refreshRecon(sel) {
     const acctField = document.getElementById('recon-account-no');
@@ -1070,71 +1106,57 @@
 
   function loadTransactions() {
     const active = typeof getActiveEntity === 'function' ? getActiveEntity() : null;
-    const bType = active ? active.businessType : 'carrier';
-    const prefix = bType === 'carrier' ? 'carrier_' : 'mga_';
-    
-    // 1. Load custom/manual bank statement items from localStorage
-    let stored = [];
-    try {
-      const raw = localStorage.getItem(prefix + 'pas_bank_txns') || localStorage.getItem('v_pas_bank_txns');
-      if (raw) stored = JSON.parse(raw);
-    } catch(e) {}
+    const bType = active ? active.businessType : 'mga';
+    const activeId = active ? active.id : 'ENT-MINE';
+    const isBroker = (bType === 'agency' || bType === 'broker' || activeId === 'ENT-AGY-01' || activeId === 'ENT-BRK-01');
+    const isCarrier = (bType === 'carrier' || activeId === 'ENT-CAR-01');
+    const isMGA = !isBroker && !isCarrier;
 
-    const mapped = stored.map((item, idx) => ({
-      id: 'BANK-CUSTOM-' + idx,
-      date: item.date || '2026-08-20',
-      desc: item.desc || 'Bank Statement Line',
-      spent: item.amount < 0 ? -item.amount : (item.spent || null),
-      recv: item.amount > 0 ? item.amount : (item.recv || null),
-      status: item.status || 'posted',
-      source: item.source || (item.amount > 0 ? 'Customer' : 'Vendor'),
-      fromto: item.fromto || (item.amount > 0 ? 'Customer / Insured' : 'Carrier / Payee'),
-      ledger: item.ledger || '1001 · Cash / Bank (Operating)',
-      hasNote: false,
-      hasAtt: false,
-      checkNo: item.checkNo || '-',
-      type: item.type || (item.amount > 0 ? 'ACH' : 'WIRE'),
-      glMatch: item.glMatch || 'JE-SYNC'
-    }));
+    // 1. Extract ONLY the journal entries belonging to the active entity
+    const activeJEs = (typeof getJournalEntriesForActiveEntity === 'function') 
+      ? getJournalEntriesForActiveEntity() 
+      : [];
 
-    // 2. Dynamically extract live cash transactions from all posted General Ledger journals
-    let glTxns = [];
-    try {
-      let allJes = [];
-      if (typeof getJournalEntries === 'function') {
-        allJes = getJournalEntries();
-      }
-      const rawC = localStorage.getItem('carrier_v_gl_journal_entries');
-      if (rawC) {
-        const cJes = JSON.parse(rawC);
-        cJes.forEach(j => { if (!allJes.some(x => x.id === j.id)) allJes.push(j); });
-      }
-      const rawM = localStorage.getItem('mga_v_gl_journal_entries');
-      if (rawM) {
-        const mJes = JSON.parse(rawM);
-        mJes.forEach(j => { if (!allJes.some(x => x.id === j.id)) allJes.push(j); });
-      }
+    let txns = [];
 
-      allJes.filter(j => j.status === 'posted').forEach((je, jIdx) => {
-        if (Array.isArray(je.lines)) {
-          je.lines.forEach((l, lIdx) => {
-            if (l.acct === '1001' || l.acct === '1020' || l.acct === '1010') {
-              const debit = parseFloat(l.debit) || 0;
-              const credit = parseFloat(l.credit) || 0;
-              if (debit > 0 || credit > 0) {
-                const isDeposit = debit > 0;
-                const amt = isDeposit ? debit : credit;
-                const dateVal = je.date || (je.postedAt ? je.postedAt.slice(0, 10) : (je.createdAt ? je.createdAt.slice(0, 10) : '2026-08-20'));
-                
-                glTxns.push({
+    // 2. Extract real cash ledger transactions from the active entity's journal entries
+    activeJEs.forEach(je => {
+      if (Array.isArray(je.lines)) {
+        je.lines.forEach((l, lIdx) => {
+          if (l.acct === '1001' || l.acct === '1020' || l.acct === '1010') {
+            const debit = parseFloat(l.debit) || 0;
+            const credit = parseFloat(l.credit) || 0;
+            if (debit > 0 || credit > 0) {
+              const isDeposit = debit > 0;
+              const amt = isDeposit ? debit : credit;
+              const dateVal = je.date || (je.postedAt ? je.postedAt.slice(0, 10) : (je.createdAt ? je.createdAt.slice(0, 10) : '2026-08-20'));
+              
+              // Standardized, crystal-clear Payee / Payor descriptions per entity
+              let payeePayor = l.desc || je.description || '';
+              if (isBroker) {
+                if (isDeposit) payeePayor = 'Customer Premium Receipt — Ayushi';
+                else payeePayor = 'Settlement disburse to MGA: NTA';
+              } else if (isCarrier) {
+                payeePayor = 'MGA premium settlement receipt — NTA';
+              } else {
+                // MGA
+                if (isDeposit) payeePayor = 'Broker premium settlement receipt — HIT';
+                else payeePayor = 'Carrier settlement cash disburse (ACH) — Southlake';
+              }
+
+              // Deduplicate by amount & direction so each financial event produces exactly 1 row
+              const exists = txns.some(t => Math.abs((t.recv || 0) - (isDeposit ? amt : 0)) < 0.01 && 
+                                            Math.abs((t.spent || 0) - (isDeposit ? 0 : amt)) < 0.01);
+              if (!exists) {
+                txns.push({
                   id: `GL-TXN-${je.id}-${lIdx}`,
                   date: dateVal,
-                  desc: l.desc || je.description || (isDeposit ? 'Premium Receipt · Cash Deposit' : 'Disbursement Settlement Wire'),
+                  desc: payeePayor,
                   spent: isDeposit ? null : amt,
                   recv: isDeposit ? amt : null,
                   status: 'posted',
                   source: isDeposit ? 'Customer' : 'Vendor',
-                  fromto: l.dims?.broker || l.dims?.carrier || (isDeposit ? 'Insured Direct Payment' : 'Settlement Payee'),
+                  fromto: payeePayor,
                   ledger: `${l.acct} · ${l.acct === '1020' ? 'Premium Trust' : 'Cash / Bank (Operating)'}`,
                   hasNote: true,
                   hasAtt: true,
@@ -1144,27 +1166,47 @@
                 });
               }
             }
-          });
-        }
-      });
-    } catch(e) {
-      console.error('Error extracting GL cash transactions:', e);
-    }
+          }
+        });
+      }
+    });
 
-    // 3. Fallback standard bank transactions so the reconciliation workspace is always fully operational
-    const fallbackDefaults = [
-      { id: 'TXN-1', date:'2026-08-20', desc:'Premium Collection · Commercial Trucking (Ayushi)', spent:null, recv:39260.00, status:'posted', source:'Customer', fromto:'Ayushi (Insured)', ledger:'1001 · Cash / Bank', hasNote:true, hasAtt:true, checkNo:'-', type:'ACH', glMatch:'JE-2026-0048' },
-      { id: 'TXN-2', date:'2026-08-20', desc:'Carrier Net Settlement Wire · SOUTHLAKE Insurance', spent:32257.00, recv:null, status:'posted', source:'Vendor', fromto:'SOUTHLAKE Insurance Co.', ledger:'2200 · Premium Payable', hasNote:false, hasAtt:true, checkNo:'-', type:'WIRE', glMatch:'SETTLE-TX-849' },
-      { id: 'TXN-3', date:'2026-08-20', desc:'Broker Commission Remittance · Links Insurance Agency', spent:2500.00, recv:null, status:'posted', source:'Vendor', fromto:'Links Agency (Broker)', ledger:'2100 · Broker Commission Payable', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'COMM-V8NHT' },
-      { id: 'TXN-4', date:'2026-08-15', desc:'Harborview Logistics Premium Direct Bill Receipt', spent:null, recv:18420.00, status:'posted', source:'Customer', fromto:'Harborview Logistics', ledger:'1001 · Cash / Bank', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'JE-2026-0046' },
-      { id: 'TXN-5', date:'2026-08-20', desc:'Texas Stamping Office (SLTX) Surplus Lines Tax', spent:1770.00, recv:null, status:'pending', source:'Vendor', fromto:'Texas Comptroller / SLTX', ledger:'2300 · Premium Taxes Payable', hasNote:true, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'TAX-TX-0820' },
-      { id: 'TXN-6', date:'2026-08-18', desc:'Munich Re Treaty 2026 Q3 Cession Wire', spent:18250.00, recv:null, status:'pending', source:'Vendor', fromto:'Munich Re', ledger:'5500 · Reinsurance Ceded', hasNote:false, hasAtt:false, checkNo:'-', type:'WIRE', glMatch:'TREATY-2026-Q3' },
-      { id: 'TXN-7', date:'2026-08-28', desc:'Commercial Operating Interest Credit', spent:null, recv:340.00, status:'posted', source:'Bank', fromto:'Chase Commercial Banking', ledger:'4800 · Interest Income', hasNote:false, hasAtt:false, checkNo:'-', type:'ACH', glMatch:'JE-2026-0049' },
-      { id: 'TXN-8', date:'2026-08-31', desc:'Chase Treasury Analysis Service Fee', spent:120.00, recv:null, status:'excluded', source:'Bank', fromto:'Chase Commercial Banking', ledger:'7100 · Bank Charges', hasNote:true, hasAtt:false, checkNo:'-', type:'FEE', glMatch:'-' }
-    ];
+    // 3. Include any extra manual bank transactions in the isolated bank feed for this active entity
+    const prefix = isCarrier ? 'carrier_' : (isBroker ? 'agency_' : 'mga_');
+    try {
+      const raw = localStorage.getItem(prefix + 'pas_bank_txns');
+      if (raw) {
+        const stored = JSON.parse(raw);
+        stored.forEach((item, idx) => {
+          const itemAmt = item.amount || 0;
+          const isDep = itemAmt > 0 || (item.recv && !item.spent);
+          const val = Math.abs(itemAmt || item.recv || item.spent || 0);
+          
+          const alreadyMatched = txns.some(t => Math.abs((t.recv || 0) - (isDep ? val : 0)) < 0.01 && 
+                                               Math.abs((t.spent || 0) - (isDep ? 0 : val)) < 0.01);
+          if (!alreadyMatched && val > 0) {
+            txns.push({
+              id: 'BANK-CUSTOM-' + idx,
+              date: item.date || '2026-08-20',
+              desc: item.desc || (isDep ? 'Bank Deposit' : 'Bank Wire Disbursement'),
+              spent: isDep ? null : val,
+              recv: isDep ? val : null,
+              status: item.status || 'posted',
+              source: item.source || (isDep ? 'Customer' : 'Vendor'),
+              fromto: item.fromto || (isDep ? 'Customer / Insured' : 'Payee'),
+              ledger: item.ledger || '1001 · Cash / Bank (Operating)',
+              hasNote: false,
+              hasAtt: false,
+              checkNo: item.checkNo || '-',
+              type: item.type || (isDep ? 'ACH' : 'WIRE'),
+              glMatch: item.glMatch || 'JE-SYNC'
+            });
+          }
+        });
+      }
+    } catch(e) {}
 
-    const combined = [...mapped, ...glTxns];
-    return combined.length > 0 ? combined : fallbackDefaults;
+    return txns;
   }
 
   let DTL_TRANSACTIONS = loadTransactions();
@@ -1437,8 +1479,8 @@
     const acctSelect = document.getElementById('recon-gl-acct');
     const acctCode = acctSelect ? acctSelect.value : '1001';
     let currentGlBalance = typeof getAccountBalance === 'function' ? getAccountBalance(acctCode).net : 0;
-    if (currentGlBalance <= 0) {
-      currentGlBalance = 248330.00 + (matchedDep - matchedWd);
+    if (currentGlBalance === 0 && (matchedDep > 0 || matchedWd > 0)) {
+      currentGlBalance = matchedDep - matchedWd;
     }
     const currentBankBalance = currentGlBalance + (unmatchedDep - unmatchedWd);
     const difference = currentBankBalance - currentGlBalance;
@@ -1618,7 +1660,7 @@
     if (dtlHeaderPostedCountEl) dtlHeaderPostedCountEl.textContent = postedCount;
     
     const dtlHeaderPostedAmountEl = document.getElementById('dtl-header-posted-amount');
-    if (dtlHeaderPostedAmountEl) dtlHeaderPostedAmountEl.textContent = fmtAmt(postedAmount || 89260);
+    if (dtlHeaderPostedAmountEl) dtlHeaderPostedAmountEl.textContent = fmtAmt(postedAmount);
     
     const dtlHeaderUpdatedOnEl = document.getElementById('dtl-header-updated-on');
     if (dtlHeaderUpdatedOnEl) {
@@ -1895,6 +1937,8 @@
 
   // Wire all [data-filter-input] search boxes
   document.addEventListener('DOMContentLoaded', () => {
+    syncBankEntityOptions();
+    DTL_TRANSACTIONS = loadTransactions();
     renderListingRows();
     renderDetailRows('all', '');
     renderApprovalsQueue();

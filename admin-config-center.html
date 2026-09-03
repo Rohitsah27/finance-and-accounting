@@ -55,10 +55,12 @@
         <p style="font-size:12.5px;color:var(--gray-600);line-height:1.6;margin:4px 0 16px;max-width:820px;">
           Dimensions post alongside every transaction across every module, echoing the QuickBooks "Class" and "Location" model that most finance teams already know. Enable a dimension here and it immediately becomes available in the filter bar of every ledger, AR, AP, billing and reporting screen, no per-module setup required.
         </p>
-        <div class="v-config-row head">
-          <div>Dimension</div><div>Reference</div><div>Applies To</div><div>Description</div><div>Enabled</div>
+        <div style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);">
+          <div class="v-config-row head">
+            <div>Dimension</div><div>Reference</div><div>Applies To</div><div>Description</div><div style="text-align:center;">Enabled</div>
+          </div>
+          <div id="dimension-rows"></div>
         </div>
-        <div id="dimension-rows"></div>
       </div>
     </div>
 
@@ -79,10 +81,12 @@
           <button class="btn btn-primary btn-sm" onclick="addField()">+ Add Field</button>
         </div>
         <div style="font-size:12px;color:var(--gray-500);margin:2px 0 16px;">Rename, show/hide, require or lock any field across the platform, generic accounting fields and industry-specific fields side by side.</div>
-        <div class="v-config-row head" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 60px;">
-          <div>Field Label</div><div>Module</div><div>Show</div><div>Required</div><div>Read-only</div><div></div>
+        <div style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);">
+          <div class="v-config-row head" style="grid-template-columns:2.2fr 1.3fr 90px 90px 90px 50px;">
+            <div>Field Label</div><div>Module</div><div style="text-align:center;">Show</div><div style="text-align:center;">Required</div><div style="text-align:center;">Read-only</div><div></div>
+          </div>
+          <div id="field-rows"></div>
         </div>
-        <div id="field-rows"></div>
       </div>
     </div>
 
@@ -109,7 +113,12 @@
           <button class="btn btn-primary btn-sm" onclick="addGlRule()">+ Add Rule</button>
         </div>
         <div style="font-size:12px;color:var(--gray-500);margin:2px 0 16px;">The Accounting Engine never lets a module post to the GL directly. Every business event is routed through a rule like these; edit any rule to change how it books.</div>
-        <div id="glmapping-rows"></div>
+        <div style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);">
+          <div class="v-config-row head" style="grid-template-columns:1.8fr 2.5fr 110px;">
+            <div>Business Event Trigger</div><div>GL Accounting Rule / Posting Impact</div><div style="text-align:right;">Actions</div>
+          </div>
+          <div id="glmapping-rows"></div>
+        </div>
       </div>
     </div>
 
@@ -224,14 +233,16 @@ function renderDimensions() {
   document.getElementById('dimension-rows').innerHTML = DIMENSION_LIBRARY.map(d => {
     const enabled = !!cfg.enabledDimensions[d.id];
     return `<div class="v-config-row">
-      <div><strong>${d.label}</strong><div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${d.desc}</div></div>
-      <div style="font-size:11.5px;">${d.quickbooksRef ? `<em>${d.quickbooksRef}</em>` : '<span style="color:var(--gray-400);">Native to Veridex</span>'}</div>
+      <div><strong>${d.label}</strong><div style="font-size:11.5px;color:var(--gray-500);margin-top:2px;">${d.desc}</div></div>
+      <div style="font-size:12px;">${d.quickbooksRef ? `<em>${d.quickbooksRef}</em>` : '<span style="color:var(--gray-400);">Native to Veridex</span>'}</div>
       <div>${d.appliesTo.map(a => `<span class="badge badge-gray" style="margin-right:3px;">${a}</span>`).join('')}</div>
-      <div style="font-size:11.5px;color:var(--gray-500);">Filterable everywhere</div>
-      <label class="v-switch">
-        <input type="checkbox" ${enabled ? 'checked' : ''} onchange="onDimensionToggle('${d.id}', this.checked, '${d.label}')">
-        <span class="v-slider"></span>
-      </label>
+      <div style="font-size:12px;color:var(--gray-500);">Filterable everywhere</div>
+      <div style="display:flex;justify-content:center;">
+        <label class="v-switch">
+          <input type="checkbox" ${enabled ? 'checked' : ''} onchange="onDimensionToggle('${d.id}', this.checked, '${d.label}')">
+          <span class="v-slider"></span>
+        </label>
+      </div>
     </div>`;
   }).join('');
 }
@@ -277,13 +288,13 @@ const FIELD_MANAGER_ROWS = [
 
 function renderFieldManager() {
   document.getElementById('field-rows').innerHTML = FIELD_MANAGER_ROWS.map((f, i) => `
-    <div class="v-config-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 60px;">
-      <div><input class="filter-input" style="width:100%;" value="${f.field}" onchange="renameField(${i}, this.value)"></div>
+    <div class="v-config-row" style="grid-template-columns:2.2fr 1.3fr 90px 90px 90px 50px;">
+      <div><input class="filter-input" style="width:100%;font-weight:600;" value="${f.field}" onchange="renameField(${i}, this.value)"></div>
       <div><span class="badge badge-gray">${f.module}</span></div>
-      <div><label class="v-switch"><input type="checkbox" ${f.show ? 'checked' : ''} onchange="toggleFieldFlag(${i},'show',this.checked)"><span class="v-slider"></span></label></div>
-      <div><label class="v-switch"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="toggleFieldFlag(${i},'required',this.checked)"><span class="v-slider"></span></label></div>
-      <div><label class="v-switch"><input type="checkbox" ${f.readonly ? 'checked' : ''} onchange="toggleFieldFlag(${i},'readonly',this.checked)"><span class="v-slider"></span></label></div>
-      <div><button class="btn btn-outline btn-sm" title="Remove field" onclick="removeField(${i})">✕</button></div>
+      <div style="display:flex;justify-content:center;"><label class="v-switch"><input type="checkbox" ${f.show ? 'checked' : ''} onchange="toggleFieldFlag(${i},'show',this.checked)"><span class="v-slider"></span></label></div>
+      <div style="display:flex;justify-content:center;"><label class="v-switch"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="toggleFieldFlag(${i},'required',this.checked)"><span class="v-slider"></span></label></div>
+      <div style="display:flex;justify-content:center;"><label class="v-switch"><input type="checkbox" ${f.readonly ? 'checked' : ''} onchange="toggleFieldFlag(${i},'readonly',this.checked)"><span class="v-slider"></span></label></div>
+      <div style="display:flex;justify-content:center;"><button class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:4px 8px;font-size:14px;" title="Remove field" onclick="removeField(${i})">✕</button></div>
     </div>`).join('');
 }
 function renameField(i, val) {
@@ -358,22 +369,22 @@ function renderGlMapping() {
   document.getElementById('glmapping-rows').innerHTML = GL_MAPPING_RULES.map((r, i) => {
     if (glEditingIndex === i) {
       return `
-      <div class="v-config-row" style="grid-template-columns:2fr 2fr 150px;">
-        <div><input class="filter-input" style="width:100%;" id="gl-edit-event-${i}" value="${r.event}"></div>
-        <div><input class="filter-input" style="width:100%;font-family:'SF Mono','Consolas',monospace;font-size:12px;" id="gl-edit-posting-${i}" value="${r.posting}"></div>
-        <div style="display:flex;gap:6px;">
+      <div class="v-config-row" style="grid-template-columns:1.8fr 2.5fr 110px;background:#FFF7ED;border-left:3px solid var(--color-brand);">
+        <div><input class="filter-input" style="width:100%;font-weight:600;" id="gl-edit-event-${i}" value="${r.event}"></div>
+        <div><input class="filter-input" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;" id="gl-edit-posting-${i}" value="${r.posting}"></div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
           <button class="btn btn-primary btn-sm" onclick="saveGlRule(${i})">Save</button>
           <button class="btn btn-outline btn-sm" onclick="cancelGlEdit()">Cancel</button>
         </div>
       </div>`;
     }
     return `
-    <div class="v-config-row" style="grid-template-columns:2fr 2fr 150px;">
-      <div>When <strong>${r.event}</strong></div>
-      <div style="font-family:'SF Mono','Consolas',monospace;font-size:12px;color:var(--v-teal);">&rarr; ${r.posting}</div>
-      <div style="display:flex;gap:6px;">
+    <div class="v-config-row" style="grid-template-columns:1.8fr 2.5fr 110px;">
+      <div><span class="badge badge-blue" style="font-size:10px;font-weight:700;margin-right:8px;text-transform:uppercase;">TRIGGER</span> <strong>${r.event}</strong></div>
+      <div><code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0F766E;background:#F0FDFA;padding:4px 10px;border-radius:4px;border:1px solid #CCFBF1;font-weight:600;display:inline-block;">&rarr; ${r.posting}</code></div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
         <button class="btn btn-outline btn-sm" onclick="editGlRule(${i})">Edit</button>
-        <button class="btn btn-outline btn-sm" title="Remove rule" onclick="removeGlRule(${i})">✕</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:4px 8px;" title="Remove rule" onclick="removeGlRule(${i})">✕</button>
       </div>
     </div>`;
   }).join('');

@@ -34,6 +34,18 @@ function getGLAccounts() {
     }));
     glSave(GL_ACCOUNTS_KEY, accts);
   }
+
+  let modified = false;
+
+  // Enforce standard series:
+  // Assets: 1100 series, Liabilities: 2100 series, Equity: 3100 series, Revenue: 4100 series, Expense: 5100 series
+  accts.forEach(a => {
+    if (a.code === '6100') { a.code = '5100'; a.id = 'ACC-5100'; a.group = 'expense'; modified = true; }
+    if (a.code === '6101') { a.code = '5101'; a.id = 'ACC-5101'; a.group = 'expense'; modified = true; }
+    if (a.code === '6500') { a.code = '5500'; a.id = 'ACC-5500'; a.group = 'expense'; modified = true; }
+    if (a.code === '5000' && a.group === 'asset') { a.code = '1500'; a.id = 'ACC-1500'; modified = true; }
+  });
+
   if (accts && !accts.some(a => a.code === '2200')) {
     accts.push({
       id: 'ACC-2200',
@@ -45,7 +57,7 @@ function getGLAccounts() {
       createdAt: new Date().toISOString(),
       createdBy: 'System (patch)',
     });
-    glSave(GL_ACCOUNTS_KEY, accts);
+    modified = true;
   }
   if (accts && !accts.some(a => a.code === '2300')) {
     accts.push({
@@ -58,12 +70,51 @@ function getGLAccounts() {
       createdAt: new Date().toISOString(),
       createdBy: 'System (patch)',
     });
-    glSave(GL_ACCOUNTS_KEY, accts);
+    modified = true;
   }
-  if (accts && !accts.some(a => a.code === '6101')) {
+  if (accts && !accts.some(a => a.code === '3100')) {
     accts.push({
-      id: 'ACC-6101',
-      code: '6101',
+      id: 'ACC-3100',
+      code: '3100',
+      name: 'Retained Earnings',
+      group: 'equity',
+      dimensions: ['cost-center'],
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      createdBy: 'System (patch)',
+    });
+    modified = true;
+  }
+  if (accts && !accts.some(a => a.code === '3200')) {
+    accts.push({
+      id: 'ACC-3200',
+      code: '3200',
+      name: 'Common Stock / Capital Surplus',
+      group: 'equity',
+      dimensions: ['cost-center'],
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      createdBy: 'System (patch)',
+    });
+    modified = true;
+  }
+  if (accts && !accts.some(a => a.code === '5100')) {
+    accts.push({
+      id: 'ACC-5100',
+      code: '5100',
+      name: 'Commission Expense / Revenue',
+      group: 'expense',
+      dimensions: ['mga', 'broker', 'cost-center', 'lob'],
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      createdBy: 'System (patch)',
+    });
+    modified = true;
+  }
+  if (accts && !accts.some(a => a.code === '5101')) {
+    accts.push({
+      id: 'ACC-5101',
+      code: '5101',
       name: 'Commission Expense — MGA Override',
       group: 'expense',
       dimensions: ['mga', 'broker', 'cost-center', 'lob'],
@@ -71,8 +122,25 @@ function getGLAccounts() {
       createdAt: new Date().toISOString(),
       createdBy: 'System (patch)',
     });
+    modified = true;
+  }
+
+  // Remove obsolete codes and deduplicate
+  const seenCodes = new Set();
+  accts = accts.filter(a => {
+    if (a.code === '6100' || a.code === '6101' || a.code === '6500' || (a.code === '5000' && a.group === 'asset')) return false;
+    if (seenCodes.has(a.code)) return false;
+    seenCodes.add(a.code);
+    return true;
+  });
+
+  // Sort strictly by account code
+  accts.sort((a, b) => (parseInt(a.code, 10) || 0) - (parseInt(b.code, 10) || 0));
+
+  if (modified) {
     glSave(GL_ACCOUNTS_KEY, accts);
   }
+
   return accts;
 }
 
@@ -183,38 +251,82 @@ function sanitizeBrokerJournalEntry(je) {
   const isBroker = (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT');
   if (!isBroker) return je;
 
-  const has4100 = je.lines.some(l => l.acct === '4100');
-  const hasCarrierPayable = je.lines.some(l => (l.desc || '').includes('Carrier Settlement') || (l.desc || '').includes('SOUTHLAKE'));
-  const hasTaxPayable = je.lines.some(l => l.acct === '2300');
+  const desc = (je.description || '').toLowerCase();
+  const isPolV8NHT = desc.includes('v8nht') || desc.includes('ayushi') || (je.lines && je.lines.some(l => (l.desc || '').includes('Ayushi') || (l.desc || '').includes('V8NHT')));
 
-  if (has4100 || hasCarrierPayable || hasTaxPayable) {
-    const totalDebit = jeTotalDebit(je) || 39260;
-    const commAmt = 2500;
-    const netMGA = totalDebit - commAmt;
-    je.lines = [
-      {
-        acct: '1100',
-        debit: totalDebit,
-        credit: 0,
-        desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)',
-        dims: { broker: 'HIT', mga: 'NTA', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '2200',
-        debit: 0,
-        credit: netMGA,
-        desc: 'Net Premium Payable — NTA',
-        dims: { mga: 'NTA', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '6100',
-        debit: 0,
-        credit: commAmt,
-        desc: 'Producer / Broker Commission Revenue',
-        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
-      }
-    ];
+  if (isPolV8NHT) {
+    const isCustomerPayment = (desc.includes('receipt') || desc.includes('customer') || desc.includes('payment received')) && !desc.includes('disburse') && !desc.includes('remittance') && !desc.includes('nta');
+    const isDisburseToMGA = desc.includes('disburse') || desc.includes('remittance') || desc.includes('pay-mga') || (desc.includes('settlement') && (desc.includes('mga') || desc.includes('nta')));
+
+    if (isCustomerPayment) {
+      je.description = 'Customer premium receipt — Ayushi';
+      je.lines = [
+        {
+          acct: '1001',
+          debit: 39260.00,
+          credit: 0,
+          desc: 'Customer Premium Receipt — Ayushi',
+          dims: { location: 'HQ' }
+        },
+        {
+          acct: '1100',
+          debit: 0,
+          credit: 39260.00,
+          desc: 'Clear Premium Receivable — Ayushi',
+          dims: { broker: 'HIT' }
+        }
+      ];
+    } else if (isDisburseToMGA) {
+      je.description = 'Settlement disburse to MGA: NTA (PAY-MGA-NTA-1) for POL-V8NHT';
+      je.lines = [
+        {
+          acct: '2200',
+          debit: 36760.00,
+          credit: 0,
+          desc: 'Clear Net Premium Payable to NTA',
+          dims: { mga: 'NTA', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '1001',
+          debit: 0,
+          credit: 36760.00,
+          desc: 'Settlement cash disburse (ACH)',
+          dims: { location: 'HQ' }
+        }
+      ];
+    } else {
+      // Stage 1: Policy Binding & Invoicing per README.md § 4.1
+      je.description = 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1';
+      je.lines = [
+        {
+          acct: '1100',
+          debit: 39260.00,
+          credit: 0,
+          desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)',
+          dims: { broker: 'HIT', mga: 'NTA', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '2200',
+          debit: 0,
+          credit: 36760.00,
+          desc: 'Net Premium Payable — NTA',
+          dims: { mga: 'NTA', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '5100',
+          debit: 0,
+          credit: 2500.00,
+          desc: 'Producer / Broker Commission Revenue',
+          dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+        }
+      ];
+    }
+  } else {
+    je.lines.forEach(l => {
+      if (l.acct === '6100') l.acct = '5100';
+    });
   }
+
   return je;
 }
 
@@ -222,87 +334,97 @@ function sanitizeMGAJournalEntry(je) {
   if (!je || !je.lines) return je;
   const isBroker = (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT');
   if (isBroker) return je;
-  const isCarrier = (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake');
+  const isCarrier = (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake' || je.createdBy === 'Carrier Operations');
   if (isCarrier) return je;
   const isMGA = (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-MGA-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'NTA');
   if (!isMGA) return je;
 
-  const isBindingOrInvoicing = (je.description && (je.description.includes('binding') || je.description.includes('invoice') || je.description.includes('INV-V8NHT')));
-  const isPaymentReceipt = (je.description && (je.description.includes('payment') || je.description.includes('settlement') || je.description.includes('receipt') || je.description.includes('received')) && !je.description.includes('Carrier') && !je.description.includes('SOUTHLAKE') && !je.description.includes('PAY-CAR'));
-  const isCarrierDisburse = (je.description && (je.description.includes('Carrier') || je.description.includes('SOUTHLAKE') || je.description.includes('PAY-CAR')));
+  const desc = (je.description || '').toLowerCase();
+  const isPolV8NHT = desc.includes('v8nht') || (je.lines && je.lines.some(l => (l.desc || '').includes('HIT') || (l.desc || '').includes('Southlake')));
 
-  if (isBindingOrInvoicing && !isPaymentReceipt && !isCarrierDisburse) {
+  if (isPolV8NHT) {
+    const isPaymentReceipt = (desc.includes('payment') || desc.includes('settlement') || desc.includes('receipt') || desc.includes('received')) && !desc.includes('carrier') && !desc.includes('southlake') && !desc.includes('pay-car');
+    const isCarrierDisburse = (desc.includes('carrier') || desc.includes('southlake') || desc.includes('pay-car') || desc.includes('disburse'));
 
-    je.description = 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1';
-    je.lines = [
-      {
-        acct: '1100',
-        debit: 36760.00,
-        credit: 0,
-        desc: 'Premium Receivable — HIT (Broker Net Remittance)',
-        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '2200',
-        debit: 0,
-        credit: 29757.00,
-        desc: 'Net Premium Payable — Southlake Insurance Co.',
-        dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '2300',
-        debit: 0,
-        credit: 3503.00,
-        desc: 'Surplus Lines Taxes & Regulatory Fees (TX)',
-        dims: { state: 'TX', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '6100',
-        debit: 0,
-        credit: 3500.00,
-        desc: 'MGA Program Override & Policy Fee Revenue',
-        dims: { mga: 'NTA', lob: 'Commercial Trucking' }
-      }
-    ];
-  } else if (isPaymentReceipt) {
-
-    je.description = 'Broker premium settlement payment received from HIT for POL-V8NHT';
-    je.lines = [
-      {
-        acct: '1001',
-        debit: 36760.00,
-        credit: 0,
-        desc: 'Broker premium settlement receipt — HIT',
-        dims: { location: 'HQ' }
-      },
-      {
-        acct: '1100',
-        debit: 0,
-        credit: 36760.00,
-        desc: 'Clear Broker Premium Receivable — HIT',
-        dims: { broker: 'HIT', lob: 'Commercial Trucking' }
-      }
-    ];
-  } else if (isCarrierDisburse) {
-
-    je.description = 'Settlement disburse to Carrier: Southlake Insurance Co. (POL-V8NHT)';
-    je.lines = [
-      {
-        acct: '2200',
-        debit: 29757.00,
-        credit: 0,
-        desc: 'Clear Net Premium Payable to Southlake Insurance Co.',
-        dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
-      },
-      {
-        acct: '1001',
-        debit: 0,
-        credit: 29757.00,
-        desc: 'Carrier settlement cash disburse (ACH)',
-        dims: { location: 'HQ' }
-      }
-    ];
+    if (isPaymentReceipt && !isCarrierDisburse) {
+      // Stage 3: Broker Settlement Received per README.md § 4.1
+      je.description = 'Broker premium settlement payment received from HIT for POL-V8NHT';
+      je.lines = [
+        {
+          acct: '1001',
+          debit: 36760.00,
+          credit: 0,
+          desc: 'Broker premium settlement receipt — HIT',
+          dims: { location: 'HQ' }
+        },
+        {
+          acct: '1100',
+          debit: 0,
+          credit: 36760.00,
+          desc: 'Clear Broker Premium Receivable — HIT',
+          dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+        }
+      ];
+    } else if (isCarrierDisburse) {
+      // Stage 5a: Net Settlement to Carrier per README.md § 4.1
+      je.description = 'Settlement disburse to Carrier: Southlake Insurance Co. for POL-V8NHT';
+      je.lines = [
+        {
+          acct: '2200',
+          debit: 29757.00,
+          credit: 0,
+          desc: 'Clear Net Premium Payable to Southlake Insurance Co.',
+          dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '1001',
+          debit: 0,
+          credit: 29757.00,
+          desc: 'Carrier settlement cash disburse (ACH)',
+          dims: { location: 'HQ' }
+        }
+      ];
+    } else {
+      // Stage 1: Policy Invoicing & Intermediary Accrual per README.md § 4.1
+      je.description = 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1';
+      je.lines = [
+        {
+          acct: '1100',
+          debit: 36760.00,
+          credit: 0,
+          desc: 'Premium Receivable — HIT (Broker Net Remittance)',
+          dims: { broker: 'HIT', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '2200',
+          debit: 0,
+          credit: 29757.00,
+          desc: 'Net Premium Payable — Southlake Insurance Co.',
+          dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '2300',
+          debit: 0,
+          credit: 3503.00,
+          desc: 'Surplus Lines Taxes & Regulatory Fees (TX)',
+          dims: { state: 'TX', lob: 'Commercial Trucking' }
+        },
+        {
+          acct: '4100',
+          debit: 0,
+          credit: 3500.00,
+          desc: 'MGA Program Override & Policy Fee Revenue',
+          dims: { mga: 'NTA', lob: 'Commercial Trucking' }
+        }
+      ];
+    }
+  } else {
+    je.lines.forEach(l => {
+      if (l.acct === '6100') l.acct = '5100';
+      if (l.acct === '6101') l.acct = '5101';
+    });
   }
+
   return je;
 }
 
@@ -368,17 +490,22 @@ function getJournalEntries() {
   try {
     const rawCarrier = localStorage.getItem('carrier_v_gl_journal_entries');
     if (rawCarrier) {
-      const carrierJEs = JSON.parse(rawCarrier);
+      let carrierJEs = JSON.parse(rawCarrier);
+      carrierJEs.forEach(je => {
+        je.lines.forEach(l => {
+          if (l.acct === '6101') l.acct = '5101';
+          if (l.acct === '6100') l.acct = '5100';
+        });
+      });
+      localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carrierJEs));
       carrierJEs.forEach(je => {
         const existingIdx = all.findIndex(x => (je.id && x.id === je.id) || (je.number && x.number === je.number && x.entityId === je.entityId));
         if (existingIdx === -1) {
           all.push(je);
           changed = true;
         } else {
-          if (je.status === 'posted' || all[existingIdx].status !== 'posted') {
-            all[existingIdx] = je;
-            changed = true;
-          }
+          all[existingIdx] = je;
+          changed = true;
         }
       });
     }
@@ -387,18 +514,17 @@ function getJournalEntries() {
   try {
     const rawAgency = localStorage.getItem('agency_v_gl_journal_entries');
     if (rawAgency) {
-      const agencyJEs = JSON.parse(rawAgency);
-      agencyJEs.forEach(je => {
-        const sanitized = sanitizeBrokerJournalEntry(je);
+      let agencyJEs = JSON.parse(rawAgency);
+      agencyJEs = agencyJEs.map(je => sanitizeBrokerJournalEntry(je));
+      localStorage.setItem('agency_v_gl_journal_entries', JSON.stringify(agencyJEs));
+      agencyJEs.forEach(sanitized => {
         const existingIdx = all.findIndex(x => (sanitized.id && x.id === sanitized.id) || (sanitized.number && x.number === sanitized.number && (x.entityId === sanitized.entityId || x.createdBy === 'HIT')));
         if (existingIdx === -1) {
           all.push(sanitized);
           changed = true;
         } else {
-          if (sanitized.status === 'posted' || all[existingIdx].status !== 'posted') {
-            all[existingIdx] = sanitized;
-            changed = true;
-          }
+          all[existingIdx] = sanitized;
+          changed = true;
         }
       });
     }
@@ -407,17 +533,17 @@ function getJournalEntries() {
   try {
     const rawMga = localStorage.getItem('mga_v_gl_journal_entries');
     if (rawMga) {
-      const mgaJEs = JSON.parse(rawMga);
-      mgaJEs.forEach(je => {
-        const existingIdx = all.findIndex(x => (je.id && x.id === je.id) || (je.number && x.number === je.number && x.entityId === je.entityId));
+      let mgaJEs = JSON.parse(rawMga);
+      mgaJEs = mgaJEs.map(je => sanitizeMGAJournalEntry(je));
+      localStorage.setItem('mga_v_gl_journal_entries', JSON.stringify(mgaJEs));
+      mgaJEs.forEach(sanitized => {
+        const existingIdx = all.findIndex(x => (sanitized.id && x.id === sanitized.id) || (sanitized.number && x.number === sanitized.number && sanitized.entityId === x.entityId));
         if (existingIdx === -1) {
-          all.push(je);
+          all.push(sanitized);
           changed = true;
         } else {
-          if (je.status === 'posted' || all[existingIdx].status !== 'posted') {
-            all[existingIdx] = je;
-            changed = true;
-          }
+          all[existingIdx] = sanitized;
+          changed = true;
         }
       });
     }
@@ -485,10 +611,10 @@ function getJournalEntries() {
           description: 'Policy binding and premium invoice issued for POL-V8NHT (Ayushi) · Invoice INV-V8NHT-1',
           source: 'INSURANCE',
           lines: [
-            { acct: '1100', debit: 39260.00, credit: 0, desc: 'Premium Receivable — Ayushi (INV-V8NHT-1)', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+            { acct: '1100', debit: 36760.00, credit: 0, desc: 'Premium Receivable — HIT (Broker Net Remittance)', dims: { broker: 'HIT', lob: 'Commercial Trucking' } },
             { acct: '2200', debit: 0, credit: 29757.00, desc: 'Net Premium Payable — Southlake Insurance Co.', dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' } },
-            { acct: '2300', debit: 0, credit: 3503.00, desc: 'Surplus Lines Taxes & Fees (TX)', dims: { state: 'TX' } },
-            { acct: '4100', debit: 0, credit: 6000.00, desc: 'MGA Program Override & Broker Commission Revenue', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
+            { acct: '2300', debit: 0, credit: 3503.00, desc: 'Surplus Lines Taxes & Regulatory Fees (TX)', dims: { state: 'TX', lob: 'Commercial Trucking' } },
+            { acct: '4100', debit: 0, credit: 3500.00, desc: 'MGA Program Override & Policy Fee Revenue', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
           ]
         };
         all.push(mgaInvoiceJE);
@@ -533,47 +659,83 @@ function getJournalEntries() {
           } catch (e) {}
         }
       }
-      // 3. Carrier Bordereau Ingestion Entry
-      const hasCarrierInvoiceJE = all.some(j => (j.entityId === 'ENT-CAR-01' || j.createdBy === 'Southlake' || j.createdBy === 'Carrier Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('Bordereau') || (j.description || '').includes('binding') || (j.description || '').includes('Ingestion'))));
-      if (!hasCarrierInvoiceJE) {
-        const carrierInvoiceJE = {
-          id: 'JE-CAR-BIND-V8NHT',
-          number: getNextJournalNumber('ENT-CAR-01', all),
-          entityId: 'ENT-CAR-01',
-          date: '2026-08-20',
-          status: 'draft',
-          postedAt: new Date().toISOString(),
-          createdBy: 'Carrier Operations',
-          description: 'MGA Bordereau Ingestion & Policy Binding for POL-V8NHT',
-          source: 'INSURANCE',
-          lines: [
-            { acct: '1100', debit: 29757.00, credit: 0, desc: 'Premium Receivable — NTA (Net to Carrier)', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
-            { acct: '6100', debit: 2500.00, credit: 0, desc: 'Commission Expense — Broker', dims: { broker: 'HIT', lob: 'Commercial Trucking' } },
-            { acct: '6101', debit: 3500.00, credit: 0, desc: 'Commission Expense — MGA Override', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
-            { acct: '4100', debit: 0, credit: 35757.00, desc: 'Written Premium Revenue', dims: { lob: 'Commercial Trucking' } }
-          ]
-        };
-        all.push(carrierInvoiceJE);
-        changed = true;
-        try {
-          let carList = JSON.parse(localStorage.getItem('carrier_v_gl_journal_entries') || '[]');
-          if (!carList.some(x => x.id === carrierInvoiceJE.id || x.description === carrierInvoiceJE.description)) {
-            carList.unshift(carrierInvoiceJE);
-            localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carList));
-          }
-        } catch (e) {}
+
+      // 2b. MGA Net Premium Settlement Disburse to Carrier Entry (Stage 5: when MGA pays Carrier)
+      const isMGAPaidToCarrier = (rawMgaInvoices && JSON.parse(rawMgaInvoices).some(inv => (inv.type && inv.type.includes('Carrier')) && inv.status === 'Paid')) || 
+                                 localStorage.getItem('v_mga_settlement_paid_POL-V8NHT') === 'true';
+      if (isMGAPaidToCarrier) {
+        const hasMGADisbJE = all.some(j => (j.entityId === 'ENT-MINE' || j.createdBy === 'NTA Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('disburse') || (j.description || '').includes('Southlake') || (j.description || '').includes('Carrier'))));
+        if (!hasMGADisbJE) {
+          const mgaDisbJE = {
+            id: 'JE-MGA-DISB-V8NHT',
+            number: getNextJournalNumber('ENT-MINE', all),
+            entityId: 'ENT-MINE',
+            date: '2026-08-20',
+            status: 'draft',
+            postedAt: new Date().toISOString(),
+            createdBy: 'NTA Operations',
+            description: 'Settlement disburse to Carrier: Southlake Insurance Co. for POL-V8NHT',
+            source: 'INSURANCE',
+            lines: [
+              { acct: '2200', debit: 29757.00, credit: 0, desc: 'Clear Net Premium Payable to Southlake Insurance Co.', dims: { cost_center: '00 - Corporate', lob: 'Commercial Trucking' } },
+              { acct: '1001', debit: 0, credit: 29757.00, desc: 'Carrier settlement cash disburse (ACH)', dims: { location: 'HQ' } }
+            ]
+          };
+          all.push(mgaDisbJE);
+          changed = true;
+          try {
+            let mgaList = JSON.parse(localStorage.getItem('mga_v_gl_journal_entries') || '[]');
+            if (!mgaList.some(x => x.id === mgaDisbJE.id || x.description === mgaDisbJE.description)) {
+              mgaList.unshift(mgaDisbJE);
+              localStorage.setItem('mga_v_gl_journal_entries', JSON.stringify(mgaList));
+            }
+          } catch (e) {}
+        }
+      }
+      // 3. Carrier Bordereau Ingestion Entry (Stage 4: Triggered when Carrier clicks Ingest or MGA pays)
+      const isBordereauIngested = localStorage.getItem('v_bordereau_ingested_POL-V8NHT') === 'true' || localStorage.getItem('v_mga_settlement_paid_POL-V8NHT') === 'true' || localStorage.getItem('v_carrier_wire_matched_POL-V8NHT') === 'true';
+      if (isBordereauIngested) {
+        const hasCarrierInvoiceJE = all.some(j => (j.entityId === 'ENT-CAR-01' || j.createdBy === 'Southlake' || j.createdBy === 'Carrier Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('Bordereau') || (j.description || '').includes('Ingestion'))));
+        if (!hasCarrierInvoiceJE) {
+          const carrierInvoiceJE = {
+            id: 'JE-CAR-BIND-V8NHT',
+            number: getNextJournalNumber('ENT-CAR-01', all),
+            entityId: 'ENT-CAR-01',
+            date: '2026-08-20',
+            status: 'draft',
+            postedAt: new Date().toISOString(),
+            createdBy: 'Carrier Operations',
+            description: 'MGA Bordereau Ingestion for POL-V8NHT',
+            source: 'INSURANCE',
+            lines: [
+              { acct: '1100', debit: 29757.00, credit: 0, desc: 'Settlement Receivable — MGA NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+              { acct: '5101', debit: 3500.00, credit: 0, desc: 'Commission Expense — MGA Override', dims: { mga: 'NTA', lob: 'Commercial Trucking' } },
+              { acct: '4100', debit: 0, credit: 33257.00, desc: 'Gross Written Premium Revenue', dims: { lob: 'Commercial Trucking' } }
+            ]
+          };
+          all.push(carrierInvoiceJE);
+          changed = true;
+          try {
+            let carList = JSON.parse(localStorage.getItem('carrier_v_gl_journal_entries') || '[]');
+            if (!carList.some(x => x.id === carrierInvoiceJE.id || x.description === carrierInvoiceJE.description)) {
+              carList.unshift(carrierInvoiceJE);
+              localStorage.setItem('carrier_v_gl_journal_entries', JSON.stringify(carList));
+            }
+          } catch (e) {}
+        }
       }
       
-      // 4. Carrier Settlement Receipt Entry if MGA paid
-      const mgaPaid = rawMgaInvoices && JSON.parse(rawMgaInvoices).some(inv => (inv.type === 'Carrier Settlement' || (inv.type && inv.type.includes('Carrier'))) && inv.status === 'Paid');
-      if (mgaPaid) {
+      // 4. Carrier Settlement Receipt Entry (Stage 5: Triggered when MGA pays or Carrier matches wire)
+      const isMGAPaid = localStorage.getItem('v_mga_settlement_paid_POL-V8NHT') === 'true';
+      const isCarrierWireMatched = localStorage.getItem('v_carrier_wire_matched_POL-V8NHT') === 'true';
+      if (isMGAPaid || isCarrierWireMatched) {
         const hasCarrierRecvJE = all.some(j => (j.entityId === 'ENT-CAR-01' || j.createdBy === 'Southlake' || j.createdBy === 'Carrier Operations') && ((j.description || '').includes('V8NHT') && ((j.description || '').includes('received') || (j.description || '').includes('Settlement'))));
         if (!hasCarrierRecvJE) {
           const carrierRecvJE = {
             id: 'JE-CAR-RECV-V8NHT',
             number: getNextJournalNumber('ENT-CAR-01', all),
             entityId: 'ENT-CAR-01',
-            date: '2026-08-20',
+            date: '2026-09-02',
             status: 'draft',
             postedAt: new Date().toISOString(),
             createdBy: 'Carrier Operations',
@@ -581,7 +743,7 @@ function getJournalEntries() {
             source: 'INSURANCE',
             lines: [
               { acct: '1001', debit: 29757.00, credit: 0, desc: 'MGA premium settlement receipt — NTA', dims: { location: 'HQ' } },
-              { acct: '1100', debit: 0, credit: 29757.00, desc: 'Clear MGA Premium Receivable — NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
+              { acct: '1100', debit: 0, credit: 29757.00, desc: 'Clear Settlement Receivable — MGA NTA', dims: { mga: 'NTA', lob: 'Commercial Trucking' } }
             ]
           };
           all.push(carrierRecvJE);
@@ -864,13 +1026,16 @@ function getJournalEntriesForActiveEntity() {
   
   let filtered = all.filter(je => {
     if (active.businessType === 'agency' || active.businessType === 'broker') {
-      return (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT' || je.createdBy === 'Links Agency' || (je.description && (je.description.includes('HIT') || je.description.includes('MGA')) && je.entityId !== 'ENT-MINE' && je.entityId !== 'ENT-CAR-01'));
+      if (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-CAR-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'Carrier Operations' || je.createdBy === 'Southlake') return false;
+      return (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-BRK-01' || je.createdBy === 'HIT' || je.createdBy === 'Links Agency' || (je.description && (je.description.includes('HIT') || je.description.includes('POL-V8NHT'))));
     }
     if (active.businessType === 'mga') {
-      return (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-MGA-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'MGA User' || (je.description && (je.description.includes('NTA') || je.description.includes('ACCL')) && je.entityId !== 'ENT-AGY-01' && je.entityId !== 'ENT-CAR-01'));
+      if (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-CAR-01' || je.createdBy === 'HIT' || je.createdBy === 'Carrier Operations' || je.createdBy === 'Southlake') return false;
+      return (je.entityId === 'ENT-MINE' || je.entityId === 'ENT-MGA-01' || je.createdBy === 'NTA Operations' || je.createdBy === 'MGA User' || (je.description && (je.description.includes('NTA') || je.description.includes('ACCL') || je.description.includes('Carrier') || je.description.includes('POL-V8NHT'))));
     }
     if (active.businessType === 'carrier') {
-      return (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake' || (je.description && je.description.includes('Carrier Ledger')));
+      if (je.entityId === 'ENT-AGY-01' || je.entityId === 'ENT-MINE' || je.createdBy === 'HIT' || je.createdBy === 'NTA Operations') return false;
+      return (je.entityId === 'ENT-CAR-01' || je.createdBy === 'Southlake' || je.createdBy === 'Carrier Operations' || (je.description && (je.description.includes('Bordereau Ingestion') || je.description.includes('received from NTA'))));
     }
     return true;
   });
@@ -885,7 +1050,12 @@ function getAccountBalance(accountCode) {
   const opening = getOpeningBalances()[accountCode] || { debit: 0, credit: 0 };
   let debit = opening.debit || 0, credit = opening.credit || 0;
   getJournalEntriesForActiveEntity().filter(j => j.status === 'posted').forEach(je => {
-    je.lines.filter(l => l.acct === accountCode).forEach(l => {
+    je.lines.filter(l => l.acct === accountCode ||
+      (accountCode === '5100' && l.acct === '6100') ||
+      (accountCode === '5101' && l.acct === '6101') ||
+      (accountCode === '5500' && l.acct === '6500') ||
+      (accountCode === '1500' && l.acct === '5000')
+    ).forEach(l => {
       debit += parseFloat(l.debit) || 0;
       credit += parseFloat(l.credit) || 0;
     });
@@ -904,7 +1074,12 @@ function getAccountLedger(accountCode) {
     .filter(j => j.status === 'posted')
     .sort((a, b) => new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt))
     .forEach(je => {
-      je.lines.filter(l => l.acct === accountCode).forEach(l => {
+      je.lines.filter(l => l.acct === accountCode ||
+        (accountCode === '5100' && l.acct === '6100') ||
+        (accountCode === '5101' && l.acct === '6101') ||
+        (accountCode === '5500' && l.acct === '6500') ||
+        (accountCode === '1500' && l.acct === '5000')
+      ).forEach(l => {
         rows.push({
           jeId: je.id, jeNumber: je.number, date: je.date || je.createdAt.slice(0, 10),
           description: l.desc || je.description, debit: parseFloat(l.debit) || 0, credit: parseFloat(l.credit) || 0,

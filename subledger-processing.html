@@ -429,11 +429,11 @@
         tbody.innerHTML = '<tr id="empty-aging-row"><td colspan="8" style="text-align:center;color:var(--gray-400);padding:24px;">No outstanding balances to analyze.</td></tr>';
       }
       
-      document.getElementById('age-current').textContent = '$' + fmtLakhCrore(age0);
-      document.getElementById('age-31').textContent = '$' + fmtLakhCrore(age30);
-      document.getElementById('age-61').textContent = '$' + fmtLakhCrore(age60);
-      document.getElementById('age-91').textContent = '$' + fmtLakhCrore(age90);
-      document.getElementById('age-120').textContent = '$' + fmtLakhCrore(age120);
+      document.getElementById('age-current').textContent = fmtCurrency(age0);
+      document.getElementById('age-31').textContent = fmtCurrency(age30);
+      document.getElementById('age-61').textContent = fmtCurrency(age60);
+      document.getElementById('age-91').textContent = fmtCurrency(age90);
+      document.getElementById('age-120').textContent = fmtCurrency(age120);
     }
 
     function showReconPanel() {

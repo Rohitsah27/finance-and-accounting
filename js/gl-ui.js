@@ -159,13 +159,21 @@ function openJournalEntryModal(jeId) {
   };
 
   const getAccountDisplay = (acctCode, jeEntity) => {
-    const a = (typeof findGLAccountByCode === 'function') ? findGLAccountByCode(acctCode) : null;
-    if (!a) return acctCode;
-    if (acctCode === '6100') {
-      const isBroker = jeEntity === 'ENT-AGY-01' || jeEntity === 'ENT-BRK-01' || (typeof getActiveEntity === 'function' && getActiveEntity() && (getActiveEntity().businessType === 'agency' || getActiveEntity().businessType === 'broker'));
-      return acctCode + ' - ' + (isBroker ? 'Commission Revenue' : a.name);
+    let code = acctCode;
+    if (code === '6100') code = '5100';
+    if (code === '6101') code = '5101';
+    if (code === '6500') code = '5500';
+    if (code === '5000') code = '1500';
+    const a = (typeof findGLAccountByCode === 'function') ? findGLAccountByCode(code) : null;
+    const isBroker = jeEntity === 'ENT-AGY-01' || jeEntity === 'ENT-BRK-01' || (typeof getActiveEntity === 'function' && getActiveEntity() && (getActiveEntity().businessType === 'agency' || getActiveEntity().businessType === 'broker'));
+    if (!a) {
+      if (code === '5100') return code + ' - ' + (isBroker ? 'Producer / Broker Commission Revenue' : 'Commission Expense / Revenue');
+      return code;
     }
-    return acctCode + ' - ' + a.name;
+    if (code === '5100') {
+      return code + ' - ' + (isBroker ? 'Producer / Broker Commission Revenue' : a.name);
+    }
+    return code + ' - ' + a.name;
   };
 
   const linesHtml = je.lines.map(l => `
